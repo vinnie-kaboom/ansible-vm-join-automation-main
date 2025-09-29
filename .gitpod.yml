@@ -1,4 +1,6 @@
+image: gitpod/workspace-full:latest
+
 vscode:
   extensions:
+    - github.copilot
     - github.copilot-chat
-  version: latest
