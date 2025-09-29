@@ -1,6 +1,5 @@
-image: gitpod/workspace-full:latest
-
+# .gitpod.yml
 vscode:
   extensions:
-    - github.copilot
-    - github.copilot-chat
+    - codeium.codeium
+    # Or alternative: tabnine.tabnine-vscode
