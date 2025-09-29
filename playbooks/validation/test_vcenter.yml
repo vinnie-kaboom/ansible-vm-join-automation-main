@@ -1,0 +1,52 @@
+---
+# Test vCenter Connection
+# Validates vCenter connectivity and permissions
+
+- name: "Test vCenter Connection"
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  tags:
+    - vcenter
+    - test
+    - connection
+
+  vars:
+    project_config: "{{ lookup('file', 'configs/project_config.yml') | from_yaml }}"
+
+  tasks:
+    - name: "Load vCenter configuration"
+      set_fact:
+        vcenter_host: "{{ project_config.vcenter.host }}"
+        vcenter_user: "{{ project_config.vcenter.user }}"
+        vcenter_user_password: "{{ project_config.vcenter.password }}"
+        vcenter_datacenter: "{{ project_config.vcenter.datacenter }}"
+        vcenter_cluster: "{{ project_config.vcenter.cluster }}"
+        vcenter_datastore: "{{ project_config.vcenter.datastore }}"
+        vcenter_folder: "{{ project_config.vcenter.folder }}"
+      tags:
+        - vcenter
+        - config
+
+    - name: "Include vCenter connection role"
+      include_role:
+        name: provisioning.vcenter_connection
+      tags:
+        - vcenter
+        - connection
+
+    - name: "Test vCenter connectivity summary"
+      debug:
+        msg: |
+          ✅ vCenter Connection Test Complete!
+          
+          Host: {{ vcenter_host }}
+          Datacenter: {{ vcenter_datacenter }}
+          Cluster: {{ vcenter_cluster }}
+          Datastore: {{ vcenter_datastore }}
+          Folder: {{ vcenter_folder }}
+          
+          All vCenter operations are ready!
+      tags:
+        - vcenter
+        - summary

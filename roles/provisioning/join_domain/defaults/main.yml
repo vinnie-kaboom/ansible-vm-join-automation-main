@@ -1,0 +1,20 @@
+---
+# Domain Join Role Defaults
+# Variable references to centralized project configuration
+# All actual values are defined in configs/project_config.yml
+
+# Domain settings - references to project config
+domain_name: "{{ project_config.domain.name }}"
+admin_user: "{{ project_config.domain.admin_user }}"
+admin_password: "{{ project_config.domain.admin_password }}"
+
+# OU paths - references to project config
+ou_paths:
+  linux: "{{ project_config.domain.linux_ou }}"
+  windows: "{{ project_config.domain.windows_ou }}"
+
+# Package lists - references to project config
+linux_packages: "{{ project_config.domain_join.linux.packages }}"
+
+# Computer object description in AD
+computer_description: "{{ project_config.target_vm.description }}"

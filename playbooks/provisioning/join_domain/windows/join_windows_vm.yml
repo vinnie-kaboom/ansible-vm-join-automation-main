@@ -1,0 +1,12 @@
+---
+# Join Windows VM to Domain
+# Simple and clean domain join for Windows servers
+
+- name: Join Windows VM to Domain
+  hosts: "{{ targets.windows_group }}"
+
+  tasks:
+    - name: Include Windows domain join role
+      include_role:
+        name: provisioning.join_domain
+        tasks_from: windows

@@ -1,0 +1,107 @@
+---
+# vCenter Connection Role - Permissions Verification Tasks
+# Verifies vCenter user permissions and access levels
+
+- name: "Check vCenter API version"
+  vmware_vcenter_info:
+    hostname: "{{ vcenter_host }}"
+    username: "{{ vcenter_user }}"
+    password: "{{ vcenter_user_password }}"
+    validate_certs: "{{ vcenter_connection_validate_certs }}"
+  register: vcenter_info
+  tags:
+    - vcenter
+    - permissions
+    - api_version
+
+- name: "Validate vCenter API version"
+  assert:
+    that:
+      - vcenter_info.vcenter.version is defined
+      - vcenter_info.vcenter.version is version('6.7', '>=')
+    fail_msg: "vCenter API version {{ vcenter_info.vcenter.version }} is below minimum required version 6.7"
+    success_msg: "vCenter API version {{ vcenter_info.vcenter.version }} meets minimum requirements"
+  when: vcenter_validation_check_api_version
+  tags:
+    - vcenter
+    - permissions
+    - api_version
+
+- name: "Check datacenter access permissions"
+  vmware_datacenter_info:
+    hostname: "{{ vcenter_host }}"
+    username: "{{ vcenter_user }}"
+    password: "{{ vcenter_user_password }}"
+    validate_certs: "{{ vcenter_connection_validate_certs }}"
+    datacenter_name: "{{ project_config.vcenter.datacenter }}"
+  register: datacenter_access
+  when: vcenter_validation_check_datacenter_access
+  tags:
+    - vcenter
+    - permissions
+    - datacenter
+
+- name: "Validate datacenter access"
+  assert:
+    that:
+      - datacenter_access.datacenters is defined
+      - datacenter_access.datacenters | length > 0
+    fail_msg: "Cannot access datacenter {{ project_config.vcenter.datacenter }}"
+    success_msg: "Datacenter access verified successfully"
+  when: vcenter_validation_check_datacenter_access
+  tags:
+    - vcenter
+    - permissions
+    - datacenter
+
+- name: "Check cluster access permissions"
+  vmware_cluster_info:
+    hostname: "{{ vcenter_host }}"
+    username: "{{ vcenter_user }}"
+    password: "{{ vcenter_user_password }}"
+    validate_certs: "{{ vcenter_connection_validate_certs }}"
+    cluster_name: "{{ project_config.vcenter.cluster }}"
+  register: cluster_access
+  when: vcenter_validation_check_cluster_access
+  tags:
+    - vcenter
+    - permissions
+    - cluster
+
+- name: "Validate cluster access"
+  assert:
+    that:
+      - cluster_access.clusters is defined
+      - cluster_access.clusters | length > 0
+    fail_msg: "Cannot access cluster {{ project_config.vcenter.cluster }}"
+    success_msg: "Cluster access verified successfully"
+  when: vcenter_validation_check_cluster_access
+  tags:
+    - vcenter
+    - permissions
+    - cluster
+
+- name: "Check datastore access permissions"
+  vmware_datastore_info:
+    hostname: "{{ vcenter_host }}"
+    username: "{{ vcenter_user }}"
+    password: "{{ vcenter_user_password }}"
+    validate_certs: "{{ vcenter_connection_validate_certs }}"
+    datastore_name: "{{ project_config.vcenter.datastore }}"
+  register: datastore_access
+  tags:
+    - vcenter
+    - permissions
+    - datastore
+
+- name: "Validate datastore access"
+  assert:
+    that:
+      - datastore_access.datastores is defined
+      - datastore_access.datastores | length > 0
+    fail_msg: "Cannot access datastore {{ project_config.vcenter.datastore }}"
+    success_msg: "Datastore access verified successfully"
+  tags:
+    - vcenter
+    - permissions
+    - datastore

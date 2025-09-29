@@ -1,0 +1,14 @@
+---
+# Join Linux VM to Domain
+# Simple and clean domain join for Linux servers
+
+- name: Join Linux VM to Domain
+  hosts: "{{ targets.linux_group }}"
+  become: yes
+
+  tasks:
+    - name: Include Linux domain join role
+      include_role:
+        name: provisioning.join_domain
+        tasks_from: linux
+

@@ -1,0 +1,183 @@
+---
+# Windows Domain Validation Tasks
+# Comprehensive validation with workflow-friendly error handling
+
+- name: Windows Domain Validation Tasks
+  block:
+    - name: Check current domain membership
+      win_domain_membership_info:
+      register: domain_membership_check
+      failed_when: false
+
+    - name: Validate domain membership status
+      assert:
+        that:
+          - domain_membership_check is success
+        fail_msg: "Failed to check domain membership status"
+        success_msg: "Domain membership status check successful"
+
+    - name: Check if joined to correct domain
+      set_fact:
+        is_joined_to_correct_domain: "{{ domain_membership_check.domain == project_config.domain.name }}"
+        current_domain: "{{ domain_membership_check.domain | default('NOT_JOINED') }}"
+
+    - name: Verify domain membership
+      assert:
+        that:
+          - is_joined_to_correct_domain == true
+        fail_msg: "Server is not joined to correct domain. Current: {{ current_domain }}, Expected: {{ project_config.domain.name }}"
+        success_msg: "Server is joined to correct domain: {{ project_config.domain.name }}"
+
+    - name: Check domain controller connectivity
+      win_shell: "Test-NetConnection -ComputerName {{ project_config.domain.name }} -Port 389"
+      register: dc_connectivity_test
+
+    - name: Verify domain controller connectivity
+      assert:
+        that:
+          - dc_connectivity_test.TcpTestSucceeded == true
+        fail_msg: "Cannot connect to domain controller {{ project_config.domain.name }} on port 389. Check network connectivity."
+        success_msg: "Domain controller connectivity verified"
+
+    - name: Test domain user authentication
+      win_shell: "Get-ADUser -Identity '{{ project_config.domain.admin_user }}' -Server {{ project_config.domain.name }}"
+      register: auth_test_result
+      failed_when: false
+
+    - name: Verify domain authentication
+      assert:
+        that:
+          - auth_test_result.rc == 0
+        fail_msg: "Domain authentication failed for user {{ project_config.domain.admin_user }}. Check domain connectivity and user permissions."
+        success_msg: "Domain authentication successful for user {{ project_config.domain.admin_user }}"
+
+    - name: Check DNS resolution
+      win_shell: "Resolve-DnsName -Name {{ project_config.domain.name }}"
+      register: dns_check
+      failed_when: false
+
+    - name: Verify DNS resolution
+      assert:
+        that:
+          - dns_check.rc == 0
+        fail_msg: "DNS resolution failed for domain {{ project_config.domain.name }}. Check DNS configuration."
+        success_msg: "DNS resolution successful for domain {{ project_config.domain.name }}"
+
+    - name: Check Group Policy status
+      win_shell: "Get-GPOReport -All -ReportType XML | Select-String '{{ project_config.domain.name }}'"
+      register: gpo_check
+      failed_when: false
+
+    - name: Verify Group Policy access
+      assert:
+        that:
+          - gpo_check.rc == 0 or gpo_check.rc == 1
+        fail_msg: "Group Policy check failed. Check domain connectivity and permissions."
+        success_msg: "Group Policy access verified"
+
+    - name: Check RSAT-AD-PowerShell feature
+      win_shell: "Get-WindowsFeature -Name RSAT-AD-PowerShell"
+      register: rsat_check
+      failed_when: false
+
+    - name: Verify RSAT feature availability
+      assert:
+        that:
+          - rsat_check.InstallState == "Installed"
+        fail_msg: "RSAT-AD-PowerShell feature is not installed. Domain management tools unavailable."
+        success_msg: "RSAT-AD-PowerShell feature is available"
+
+    - name: Test domain trust relationship
+      win_shell: "Test-ComputerSecureChannel -Server {{ project_config.domain.name }}"
+      register: trust_test
+      failed_when: false
+
+    - name: Verify domain trust
+      assert:
+        that:
+          - trust_test.rc == 0
+        fail_msg: "Domain trust relationship test failed. Check domain connectivity and trust status."
+        success_msg: "Domain trust relationship verified"
+
+    - name: Check computer account status
+      win_shell: "Get-ADComputer -Identity '{{ inventory_hostname }}' -Server {{ project_config.domain.name }}"
+      register: computer_account_check
+      failed_when: false
+
+    - name: Verify computer account
+      assert:
+        that:
+          - computer_account_check.rc == 0
+        fail_msg: "Computer account not found in domain. Check if domain join was successful."
+        success_msg: "Computer account verified in domain"
+
+    - name: Final domain status validation
+      win_shell: |
+        $domainInfo = Get-ComputerInfo | Select-Object Domain, PartOfDomain, WindowsDomainName
+        $netdomInfo = netdom query /domain:{{ project_config.domain.name }} dc 2>$null
+        Write-Output "=== Computer Domain Information ==="
+        Write-Output "Domain: $($domainInfo.Domain)"
+        Write-Output "Part of Domain: $($domainInfo.PartOfDomain)"
+        Write-Output "Windows Domain Name: $($domainInfo.WindowsDomainName)"
+        Write-Output ""
+        Write-Output "=== Domain Controllers ==="
+        if ($netdomInfo) { 
+          $netdomInfo | ForEach-Object { Write-Output $_ }
+        } else {
+          Write-Output "Unable to query domain controllers"
+        }
+      register: final_domain_status
+      failed_when: false
+
+    - name: Display final domain status
+      debug:
+        msg: |
+          🔍 Final Domain Status Validation for {{ inventory_hostname }}
+          =============================================================
+          {{ final_domain_status.stdout if final_domain_status.stdout else 'Domain status query failed' }}
+
+    - name: Verify final domain status
+      assert:
+        that:
+          - final_domain_status.rc == 0
+          - final_domain_status.stdout is defined
+          - final_domain_status.stdout != ""
+          - project_config.domain.name | upper in final_domain_status.stdout or project_config.domain.name | lower in final_domain_status.stdout
+        fail_msg: "Final domain validation failed. Domain {{ project_config.domain.name }} not properly configured."
+        success_msg: "Final domain validation successful - domain {{ project_config.domain.name }} is properly configured"
+
+    - name: Set Windows validation success status
+      set_fact:
+        windows_validation_success: true
+        windows_validation_details:
+          domain: "{{ project_config.domain.name }}"
+          membership: "{{ is_joined_to_correct_domain }}"
+          dc_connectivity: "{{ dc_connectivity_test.TcpTestSucceeded }}"
+          authentication: "{{ auth_test_result.rc == 0 }}"
+          dns_resolution: "{{ dns_check.rc == 0 }}"
+          group_policy: "{{ gpo_check.rc in [0, 1] }}"
+          rsat_feature: "{{ rsat_check.InstallState == 'Installed' }}"
+          trust_relationship: "{{ trust_test.rc == 0 }}"
+          computer_account: "{{ computer_account_check.rc == 0 }}"
+          final_domain_status: "{{ final_domain_status.stdout | trim }}"
+
+    - name: Display Windows validation summary
+      debug:
+        msg: |
+          🎯 Windows Domain Validation SUCCESS for {{ inventory_hostname }}
+          =============================================================
+          Domain: {{ project_config.domain.name }}
+          Membership: {{ 'JOINED' if is_joined_to_correct_domain else 'NOT JOINED' }}
+          DC Connectivity: {{ 'SUCCESS' if dc_connectivity_test.TcpTestSucceeded else 'FAILED' }}
+          Authentication: {{ 'SUCCESS' if auth_test_result.rc == 0 else 'FAILED' }}
+          DNS Resolution: {{ 'SUCCESS' if dns_check.rc == 0 else 'FAILED' }}
+          Group Policy: {{ 'ACCESSIBLE' if gpo_check.rc in [0, 1] else 'FAILED' }}
+          RSAT Feature: {{ 'AVAILABLE' if rsat_check.InstallState == 'Installed' else 'MISSING' }}
+          Trust Relationship: {{ 'VERIFIED' if trust_test.rc == 0 else 'FAILED' }}
+          Computer Account: {{ 'FOUND' if computer_account_check.rc == 0 else 'MISSING' }}
+          
+          Final Domain Status:
+          {{ final_domain_status.stdout | trim }}
+      when: windows_validation_success
+
+  tags: validation

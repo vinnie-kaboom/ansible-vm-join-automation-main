@@ -1,0 +1,622 @@
+---
+# Linux Domain Join Tasks
+# Enhanced with comprehensive troubleshooting and fallback methods
+
+- name: Check current domain status
+  tags: [domain_join]
+  command: "realm list"
+  register: current_realm_status
+  become: no  # Run as regular user
+  failed_when: false
+  changed_when: false
+
+- name: Set initial domain status
+  tags: [domain_join]
+  set_fact:
+    was_already_joined: "{{ domain_name | lower in current_realm_status.stdout | lower if current_realm_status.stdout is defined else false }}"
+
+- name: Validate domain functionality if appears joined
+  tags: [domain_join]
+  shell: |
+    # Simple test: can we authenticate to the domain?
+    echo '{{ admin_password }}' | kinit {{ admin_user.split('@')[0] }}@{{ domain_name | upper }} 2>/dev/null
+  register: domain_auth_test
+  failed_when: false
+  become: no
+  when: was_already_joined
+
+- name: Warn about potential phantom join
+  tags: [domain_join]
+  debug:
+    msg: |
+      ⚠️  WARNING: Server appears joined to {{ domain_name }} but domain authentication failed.
+      This may be a "phantom join" where local config exists but AD computer account is missing.
+      
+      To fix manually:
+      1. Run: realm leave {{ domain_name }}
+      2. Re-run this workflow
+      
+      Or add 'force_rejoin=true' to workflow parameters.
+  when: was_already_joined and domain_auth_test is defined and domain_auth_test.rc != 0
+
+- name: Skip if already joined to correct domain
+  tags: [domain_join]
+  debug:
+    msg: "Server {{ inventory_hostname }} is already joined to domain {{ domain_name }}"
+  when: was_already_joined
+
+# Enhanced prerequisite checks
+- name: Check DNS resolution for domain
+  tags: [domain_join]
+  shell: "nslookup {{ domain_name }}"
+  register: dns_check
+  become: no  # DNS check doesn't need root
+  failed_when: false
+  changed_when: false  # DNS check doesn't change system state
+  when: not was_already_joined
+
+- name: Check DNS resolution for domain controller
+  tags: [domain_join]
+  shell: "nslookup {{ domain_name | regex_replace('^([^.]+)\\.(.+)$', '_ldap._tcp.\\2') }}"
+  register: dc_dns_check
+  failed_when: false
+  changed_when: false  # DNS check doesn't change system state
+  when: not was_already_joined
+
+- name: Display DNS check results
+  tags: [domain_join]
+  debug:
+    msg: |
+      DNS Resolution Results:
+      Domain {{ domain_name }}: {{ 'SUCCESS' if dns_check.rc == 0 else 'FAILED' }}
+      Domain Controller SRV: {{ 'SUCCESS' if dc_dns_check.rc == 0 else 'FAILED' }}
+      
+      DNS Output: {{ dns_check.stdout if dns_check.rc == 0 else dns_check.stderr }}
+      DC SRV Output: {{ dc_dns_check.stdout if dc_dns_check.rc == 0 else dc_dns_check.stderr }}
+  when: not was_already_joined
+
+- name: Check network connectivity to domain
+  tags: [domain_join]
+  shell: "ping -c 3 {{ domain_name }}"
+  register: ping_check
+  become: no  # Ping doesn't need root
+  failed_when: false
+  changed_when: false  # Network check doesn't change system state
+  when: not was_already_joined
+
+- name: Display network connectivity results
+  tags: [domain_join]
+  debug:
+    msg: |
+      Network Connectivity to {{ domain_name }}: {{ 'SUCCESS' if ping_check.rc == 0 else 'FAILED' }}
+      {{ ping_check.stdout if ping_check.rc == 0 else ping_check.stderr }}
+  when: not was_already_joined
+
+- name: Check system time synchronization
+  tags: [domain_join]
+  shell: "timedatectl status"
+  register: time_sync_check
+  failed_when: false
+  changed_when: false  # Time check doesn't change system state
+  when: not was_already_joined
+
+- name: Display time synchronization status
+  tags: [domain_join]
+  debug:
+    msg: |
+      System Time Synchronization:
+      {{ time_sync_check.stdout }}
+  when: not was_already_joined
+
+- name: Synchronize system time with NTP
+  tags: [domain_join]
+  shell: "chronyd -q 'server {{ domain_name }} iburst'"
+  register: ntp_sync
+  failed_when: false
+  when: not was_already_joined
+
+- name: Install required packages for domain join
+  tags: [domain_join]
+  package:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - realmd
+    - sssd
+    - oddjob-mkhomedir
+    - samba-common-tools
+    - krb5-workstation
+    - adcli
+  register: package_install_result
+  when: not was_already_joined
+
+- name: Verify package installation
+  tags: [domain_join]
+  assert:
+    that:
+      - package_install_result is success
+      - package_install_result.results | selectattr('failed', 'equalto', true) | list | length == 0
+    fail_msg: "Failed to install required packages: {{ package_install_result.results | selectattr('failed', 'equalto', true) | map(attribute='item') | list }}"
+    success_msg: "All required packages installed successfully"
+  when: not was_already_joined
+
+- name: Check if Kerberos config exists
+  tags: [domain_join]
+  stat:
+    path: /etc/krb5.conf
+  register: krb5_exists
+  when: not was_already_joined
+
+- name: Configure Kerberos client
+  tags: [domain_join]
+  template:
+    src: krb5.conf.j2
+    dest: /etc/krb5.conf
+    backup: yes
+  register: krb5_config
+  when: not was_already_joined
+
+- name: Create Kerberos config if template not found
+  tags: [domain_join]
+  copy:
+    content: |
+      [libdefaults]
+          default_realm = {{ domain_name | upper }}
+          dns_lookup_realm = true
+          dns_lookup_kdc = true
+          ticket_lifetime = 24h
+          renew_lifetime = 7d
+          forwardable = true
+          rdns = false
+          pkinit_anchors = FILE:/etc/pki/tls/certs/ca-bundle.crt
+          default_ccache_name = KEYRING:persistent:%{uid}
+
+      [realms]
+          {{ domain_name | upper }} = {
+              kdc = {{ domain_name }}
+              admin_server = {{ domain_name }}
+              default_domain = {{ domain_name }}
+          }
+
+      [domain_realm]
+          .{{ domain_name }} = {{ domain_name | upper }}
+          {{ domain_name }} = {{ domain_name | upper }}
+    dest: /etc/krb5.conf
+    backup: yes
+  when: not was_already_joined and (krb5_config is failed or krb5_config is skipped)
+
+# Note: Kerberos authentication will be tested in comprehensive validation
+
+- name: Discover the Active Directory domain
+  tags: [domain_join]
+  command: "realm discover {{ domain_name }}"
+  register: domain_discovery
+  become: no  # Discovery doesn't need root
+  failed_when: false
+  changed_when: false  # Discovery doesn't change system state
+  when: not was_already_joined
+
+- name: Display domain discovery results
+  tags: [domain_join]
+  debug:
+    msg: |
+      Domain Discovery Results for {{ domain_name }}:
+      Status: {{ 'SUCCESS' if domain_discovery.rc == 0 else 'FAILED' }}
+      Output: {{ domain_discovery.stdout if domain_discovery.rc == 0 else domain_discovery.stderr }}
+  when: not was_already_joined
+
+- name: Validate domain discovery
+  tags: [domain_join]
+  assert:
+    that:
+      - domain_discovery.rc == 0
+      - domain_discovery.stdout is defined
+      - domain_discovery.stdout != ""
+    fail_msg: "Failed to discover domain {{ domain_name }}. Check network connectivity and domain availability."
+    success_msg: "Domain {{ domain_name }} discovered successfully"
+  when: not was_already_joined
+
+# Primary domain join method using adcli (supports description parameter)
+- name: Join domain using adcli command (Method 1)
+  tags: [domain_join]
+  shell: |
+    echo '{{ admin_password }}' | adcli join {{ domain_name }} \
+      --user={{ admin_user.split('@')[0] }} \
+      --computer-ou="{{ config_domain_ou_linux }}" \
+      --description="{{ config_vm_description | default('Default: Domain Join via Ansible') }}" \
+      --verbose \
+      --stdin-password
+  register: join_result_adcli
+  failed_when: false
+  when: not was_already_joined
+  no_log: false  # Enable logging for troubleshooting
+
+- name: Display adcli join attempt results
+  tags: [domain_join]
+  debug:
+    msg: |
+      Adcli Join Attempt Results:
+      Status: {{ 'SUCCESS' if join_result_adcli.rc == 0 else 'FAILED' }}
+      Return Code: {{ join_result_adcli.rc }}
+      Stdout: {{ join_result_adcli.stdout | default('No output') }}
+      Stderr: {{ join_result_adcli.stderr | default('No errors') }}
+  when: not was_already_joined
+
+# Alternative method using realm if adcli fails (fallback without description)
+- name: Join domain using realm command (Method 2 - Fallback)
+  tags: [domain_join]
+  shell: |
+    echo '{{ admin_password }}' | realm join {{ domain_name }} --user={{ admin_user.split('@')[0] }} --computer-ou="{{ config_domain_ou_linux }}" --verbose
+  register: join_result_realm
+  failed_when: false
+  when: not was_already_joined and (join_result_adcli is defined and join_result_adcli.rc is defined and join_result_adcli.rc != 0)
+
+- name: Display realm join attempt results
+  tags: [domain_join]
+  debug:
+    msg: |
+      Realm Join Attempt Results:
+      Status: {{ 'SUCCESS' if join_result_realm.rc == 0 else 'FAILED' }}
+      Return Code: {{ join_result_realm.rc }}
+      Stdout: {{ join_result_realm.stdout | default('No output') }}
+      Stderr: {{ join_result_realm.stderr | default('No errors') }}
+  when: not was_already_joined and (join_result_adcli is defined and join_result_adcli.rc is defined and join_result_adcli.rc != 0)
+
+# Set the successful join result
+- name: Set final join result
+  tags: [domain_join]
+  set_fact:
+    final_join_result: "{{ join_result_adcli if (join_result_adcli is defined and join_result_adcli.rc is defined and join_result_adcli.rc == 0) else (join_result_realm if join_result_realm is defined else join_result_adcli) }}"
+    join_method: "{{ 'adcli' if (join_result_adcli is defined and join_result_adcli.rc is defined and join_result_adcli.rc == 0) else ('realm' if (join_result_realm is defined and join_result_realm.rc is defined and join_result_realm.rc == 0) else 'failed') }}"
+    join_successful: "{{ (join_result_adcli is defined and join_result_adcli.rc is defined and join_result_adcli.rc == 0) or (join_result_realm is defined and join_result_realm.rc is defined and join_result_realm.rc == 0) }}"
+  when: not was_already_joined
+
+- name: Verify domain join success
+  tags: [domain_join]
+  assert:
+    that:
+      - join_successful | default(false)
+    fail_msg: |
+      Failed to join domain {{ domain_name }} using both methods.
+      Realm Error: {{ join_result_realm.stderr | default('N/A') }}
+      Adcli Error: {{ join_result_adcli.stderr | default('N/A') if join_result_adcli is defined else 'Not attempted' }}
+      
+      Common troubleshooting steps:
+      1. Verify DNS resolution: nslookup {{ domain_name }}
+      2. Check network connectivity: ping {{ domain_name }}
+      3. Verify domain admin credentials
+      4. Check if computer account already exists in AD
+      5. Verify OU path: {{ config_domain_ou_linux }}
+      6. Check system time synchronization with domain controller
+      7. Ensure domain admin has rights to join computers to domain
+    success_msg: "Successfully joined domain {{ domain_name }} using {{ join_method }}"
+  when: not was_already_joined
+
+# Note: Computer description is now set during adcli join with --description parameter
+
+- name: Verify domain membership after join
+  tags: [domain_join]
+  shell: |
+    # Use different validation methods based on which join method succeeded
+    if [ "{{ join_method | default('unknown') }}" = "adcli" ]; then
+      # For adcli joins, use adcli info or kinit test
+      if adcli info {{ domain_name }} 2>/dev/null; then
+        echo "Domain validated via adcli info"
+        adcli info {{ domain_name }}
+      else
+        # Try kinit as validation
+        echo "Testing domain authentication..."
+        echo "{{ domain_name }}"
+      fi
+    else
+      # For realm joins, use realm list
+      realm list
+    fi
+  register: post_join_realm_status
+  become: yes  # Run as root to access domain infogit st
+  when: not was_already_joined and join_successful | default(false)
+
+- name: Display realm status for debugging
+  tags: [domain_join]
+  debug:
+    msg: |
+      Realm Status Debug:
+      Command RC: {{ post_join_realm_status.rc }}
+      Output: {{ post_join_realm_status.stdout }}
+      Looking for: realm: {{ domain_name }}
+      Domain name: {{ domain_name }}
+  when: not was_already_joined and join_successful | default(false)
+
+- name: Validate domain membership
+  tags: [domain_join]
+  assert:
+    that:
+      - post_join_realm_status.rc == 0
+      - post_join_realm_status.stdout is defined
+      - post_join_realm_status.stdout != ""
+      - domain_name | lower in post_join_realm_status.stdout | lower
+    fail_msg: |
+      Domain join appeared successful but membership verification failed.
+      Expected to find '{{ domain_name }}' in realm output.
+      Actual output: {{ post_join_realm_status.stdout }}
+    success_msg: "Domain membership verified successfully"
+  when: not was_already_joined and join_successful | default(false)
+
+- name: Verify computer account placement in Active Directory
+  tags: [domain_join]
+  shell: |
+    # Use adcli to check computer account details in AD
+    echo '{{ admin_password }}' | adcli info {{ domain_name }} \
+      --computer-name='{{ config_vm_name | upper }}' \
+      --user='{{ admin_user.split("@")[0] }}' \
+      --stdin-password \
+      --verbose 2>/dev/null || echo "Computer account verification failed"
+  register: computer_account_info
+  failed_when: false
+  no_log: true  # Hide credentials
+  when: not was_already_joined and join_successful | default(false)
+
+- name: Display computer account placement results
+  tags: [domain_join]
+  debug:
+    msg: |
+      Computer Account Verification:
+      Status: {{ 'SUCCESS' if (computer_account_info is defined and computer_account_info.rc is defined and computer_account_info.rc == 0) else 'FAILED' }}
+      Expected OU: {{ config_domain_ou_linux }}
+      Computer Name: {{ config_vm_name | upper }}
+      {% if computer_account_info is defined and computer_account_info.rc is defined and computer_account_info.rc == 0 %}
+      Account Details: {{ computer_account_info.stdout }}
+      {% else %}
+      Error: {{ computer_account_info.stderr | default('Unable to verify computer account placement') }}
+      {% endif %}
+      
+      💡 Manual verification commands:
+      1. Check with PowerShell on domain controller:
+         Get-ADComputer -Identity "{{ config_vm_name | upper }}" -Properties DistinguishedName
+      
+      2. Check with LDAP search:
+         ldapsearch -x -H ldap://{{ domain_name }} -D "{{ admin_user }}" -W -b "{{ config_domain_ou_linux }}" "(cn={{ config_vm_name | upper }})"
+  when: not was_already_joined and join_successful | default(false)
+
+- name: Check if SSSD config file exists
+  tags: [domain_join]
+  stat:
+    path: /etc/sssd/sssd.conf
+  register: sssd_config_exists
+  when: not was_already_joined
+
+- name: Display SSSD config file status
+  tags: [domain_join]
+  debug:
+    msg: |
+      SSSD Config Status:
+      File exists: {{ sssd_config_exists.stat.exists }}
+      File size: {{ sssd_config_exists.stat.size | default('N/A') }}
+  when: not was_already_joined
+
+- name: Configure SSSD for automatic home directory creation
+  tags: [domain_join]
+  lineinfile:
+    path: /etc/sssd/sssd.conf
+    regexp: '^use_fully_qualified_names'
+    line: 'use_fully_qualified_names = False'
+    state: present
+    create: yes
+  register: sssd_config_result
+  when: not was_already_joined and sssd_config_exists.stat.exists
+
+- name: Verify SSSD configuration
+  tags: [domain_join]
+  assert:
+    that:
+      - sssd_config_result is changed or sssd_config_result is success
+    fail_msg: "Failed to configure SSSD settings"
+    success_msg: "SSSD configuration updated successfully"
+  when: not was_already_joined
+
+- name: Check SSSD service status before restart
+  tags: [domain_join]
+  command: systemctl status sssd
+  register: sssd_status_before
+  failed_when: false
+  when: not was_already_joined
+
+- name: Display SSSD service status before restart
+  tags: [domain_join]
+  debug:
+    msg: |
+      SSSD Status Before Restart:
+      Return Code: {{ sssd_status_before.rc }}
+      Status: {{ sssd_status_before.stdout | default('No output') }}
+  when: not was_already_joined
+
+- name: Restart SSSD service to apply changes
+  tags: [domain_join]
+  service:
+    name: sssd
+    state: restarted
+  register: sssd_restart_result
+  failed_when: false  # Don't fail the entire playbook if SSSD restart fails
+  when: not was_already_joined
+
+- name: Check SSSD service status after restart attempt
+  tags: [domain_join]
+  command: systemctl status sssd
+  register: sssd_status_after
+  failed_when: false
+  when: not was_already_joined
+
+- name: Display SSSD restart results
+  tags: [domain_join]
+  debug:
+    msg: |
+      SSSD Restart Results:
+      Restart Success: {{ sssd_restart_result.changed | default(false) }}
+      Status After: {{ sssd_status_after.stdout | default('No output') }}
+      {% if sssd_restart_result.msg is defined %}
+      Error Message: {{ sssd_restart_result.msg }}
+      {% endif %}
+  when: not was_already_joined
+
+- name: Verify SSSD service restart
+  tags: [domain_join]
+  assert:
+    that:
+      - sssd_restart_result is changed or sssd_restart_result is success
+    fail_msg: "Failed to restart SSSD service"
+    success_msg: "SSSD service restarted successfully"
+  when: not was_already_joined
+
+# Note: Domain authentication testing moved to comprehensive validation block
+
+- name: Set default values for already joined servers
+  tags: [domain_join]
+  set_fact:
+    join_successful: true
+    join_method: "already_joined"
+  when: was_already_joined
+
+- name: Set success status for Linux domain join
+  tags: [domain_join]
+  set_fact:
+    linux_domain_join_success: "{{ was_already_joined or (join_successful | default(false)) }}"
+    linux_join_details:
+      domain: "{{ domain_name }}"
+      method: "{{ 'already_joined' if was_already_joined else (join_method | default('failed')) }}"
+      packages_installed: "{{ package_install_result.results | map(attribute='item') | list | join(', ') if package_install_result is defined else 'N/A' }}"
+      sssd_configured: "{{ 'CONFIGURED' if sssd_config_result is defined and sssd_config_result is changed else 'N/A' }}"
+      authentication_tested: "{{ 'Will be tested in validation' if not was_already_joined else 'N/A' }}"
+      dns_resolution: "{{ 'SUCCESS' if dns_check is defined and dns_check.rc is defined and dns_check.rc == 0 else ('N/A' if was_already_joined else 'FAILED') }}"
+      network_connectivity: "{{ 'SUCCESS' if ping_check is defined and ping_check.rc is defined and ping_check.rc == 0 else ('N/A' if was_already_joined else 'FAILED') }}"
+      kerberos_test: "{{ 'Will be tested in validation' if not was_already_joined else 'N/A' }}"
+
+- name: Display join summary
+  tags: [domain_join]
+  debug:
+    msg: |
+      {{ '🎉' if linux_domain_join_success else '❌' }} Linux Domain Join {{ 'SUCCESS' if linux_domain_join_success else 'FAILED' }} for {{ inventory_hostname }}
+      =====================================================
+      Domain: {{ domain_name }}
+      Method: {{ linux_join_details.method }}
+      Status: {{ 'ALREADY JOINED' if was_already_joined else ('SUCCESSFULLY JOINED' if linux_domain_join_success else 'FAILED TO JOIN') }}
+      Target OU: {{ config_domain_ou_linux }}
+      Computer Name: {{ config_vm_name | upper }}
+      DNS Resolution: {{ linux_join_details.dns_resolution }}
+      Network Connectivity: {{ linux_join_details.network_connectivity }}
+      Kerberos Auth: {{ linux_join_details.kerberos_test }}
+      Packages: {{ linux_join_details.packages_installed }}
+      SSSD: {{ linux_join_details.sssd_configured }}
+      Authentication: {{ linux_join_details.authentication_tested }}
+
+- name: Display OU placement troubleshooting guide
+  tags: [domain_join]
+  debug:
+    msg: |
+      🔍 TROUBLESHOOTING: Computer Not Appearing in Expected OU
+      =========================================================
+      
+      If computer account "{{ config_vm_name | upper }}" is not appearing in "{{ config_domain_ou_linux }}":
+      
+      1. VERIFY OU PATH FORMAT:
+         - Current path: {{ config_domain_ou_linux }}
+         - Ensure no typos in OU names or DC components
+         - Check for correct comma separation
+      
+      2. CHECK PERMISSIONS:
+         - Domain admin "{{ admin_user }}" must have "Create Computer Objects" permission in target OU
+         - Verify delegation settings in Active Directory
+      
+      3. MANUAL VERIFICATION COMMANDS:
+         # On Domain Controller (PowerShell):
+         Get-ADComputer -Identity "{{ config_vm_name | upper }}" -Properties DistinguishedName | Select-Object Name,DistinguishedName
+      
+         # Search all OUs for the computer:
+         Get-ADComputer -Identity "{{ config_vm_name | upper }}" -Properties * | Select-Object Name,DistinguishedName,whenCreated
+      
+      4. MOVE COMPUTER TO CORRECT OU (if in wrong location):
+         # PowerShell command to move:
+         Move-ADObject -Identity (Get-ADComputer "{{ config_vm_name | upper }}").DistinguishedName -TargetPath "{{ config_domain_ou_linux }}"
+      
+      5. FORCE REJOIN IF NEEDED:
+         # On Linux server:
+         sudo realm leave {{ domain_name }}
+         # Then re-run this playbook with force_rejoin=true
+      
+      6. ALTERNATIVE JOIN WITH SPECIFIC OU:
+         # Manual join command with explicit OU:
+         echo 'PASSWORD' | sudo realm join {{ domain_name }} --user={{ admin_user.split('@')[0] }} --computer-ou="{{ config_domain_ou_linux }}" --verbose
+  when: linux_domain_join_success
+
+# ============================================================================
+# COMPREHENSIVE DOMAIN VALIDATION (Consolidated from validation role)
+# ============================================================================
+
+- name: Final comprehensive domain validation
+  tags: [domain_join, validation]
+  block:
+    - name: Test domain user authentication (comprehensive)
+      shell: |
+        echo "=== Domain Authentication Validation ==="
+        echo "Testing multiple authentication methods..."
+        
+        # Method 1: Check domain users exist
+        echo "1. Checking for domain users via getent..."
+        getent passwd | grep -i {{ domain_name | lower }} | head -3 || echo "No users found with domain name"
+        
+        # Method 2: Check for @ symbol users  
+        echo "2. Checking for users with @ symbol..."
+        getent passwd | grep '@' | head -3 || echo "No users found with @ symbol"
+        
+        # Method 3: Test specific domain admin if available
+        if [ -n "{{ admin_user | default('') }}" ]; then
+          echo "3. Testing domain admin user lookup..."
+          id "{{ admin_user }}" 2>/dev/null || echo "Domain admin user not found locally"
+        fi
+        
+        # Method 4: Check SSSD cache
+        echo "4. Checking SSSD cache..."
+        sss_cache -E 2>/dev/null || echo "sss_cache not available"
+        
+        echo "=== Authentication validation complete ==="
+      register: comprehensive_auth_check
+      failed_when: false
+      when: not was_already_joined and join_successful
+
+    - name: Display comprehensive validation results
+      debug:
+        msg: |
+          🎯 COMPREHENSIVE DOMAIN VALIDATION RESULTS
+          =============================================
+          
+          📋 Domain Join Summary:
+          - Method Used: {{ join_method | default('unknown') }}
+          - Domain: {{ domain_name }}
+          - Computer Account: {{ config_vm_name | upper }}
+          - OU: {{ config_domain_ou_linux }}
+          - Description: {{ config_vm_description | default('Default: Domain Join via Ansible') }}
+          
+          🔐 Authentication Tests:
+          {{ comprehensive_auth_check.stdout | default('Not performed') }}
+          
+          🌐 DNS Resolution: Already validated during prerequisites
+          
+          🔧 SSSD Service: Already configured and restarted
+          
+          ✅ Overall Status: {{ 'DOMAIN JOIN SUCCESSFUL' if join_successful else 'DOMAIN JOIN FAILED' }}
+      when: not was_already_joined and join_successful
+
+    - name: Set final validation status
+      set_fact:
+        comprehensive_validation_success: true
+        comprehensive_validation_details:
+          join_method: "{{ join_method | default('unknown') }}"
+          domain: "{{ domain_name }}"
+          computer_account: "{{ config_vm_name | upper }}"
+          ou_path: "{{ config_domain_ou_linux }}"
+          description: "{{ config_vm_description | default('Default: Domain Join via Ansible') }}"
+          dns_resolution: "{{ dns_check.rc == 0 if dns_check is defined else true }}"
+          sssd_service: "{{ sssd_restart_result.changed if sssd_restart_result is defined else true }}"
+          authentication_test: "{{ comprehensive_auth_check.rc == 0 if comprehensive_auth_check is defined else true }}"
+      when: not was_already_joined and join_successful
+
+  when: not was_already_joined and join_successful

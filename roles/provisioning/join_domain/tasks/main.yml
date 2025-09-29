@@ -1,0 +1,7 @@
+---
+# Domain Join Role - Main Tasks
+# Entry point for domain join operations
+
+- name: Include OS-specific domain join tasks
+  include_tasks: "{{ ansible_os_family | lower }}.yml"
+  when: ansible_os_family is defined

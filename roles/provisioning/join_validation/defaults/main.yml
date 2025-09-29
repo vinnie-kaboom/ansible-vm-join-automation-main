@@ -1,0 +1,8 @@
+---
+# Domain Validation Role Defaults
+# Variable references to centralized project configuration
+# All actual values are defined in configs/project_config.yml
+
+# Validation settings - references to project config
+validation_timeout: "{{ project_config.validation.timeout }}"
+validation_retries: "{{ project_config.validation.retries }}"

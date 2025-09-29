@@ -1,0 +1,194 @@
+---
+# Main Site Playbook - Domain Join Automation
+# Enhanced with workflow-friendly error handling and rollback capabilities
+
+- name: Load project configuration from vm_config variables
+  hosts: runner
+  gather_facts: false
+
+  tasks:
+    - name: Set project configuration from vm_config variables
+      tags: [domain_join]
+      set_fact:
+        project_config:
+          domain:
+            name: "{{ config_domain_name }}"
+            realm: "{{ config_domain_realm }}"
+            admin_user: "{{ domain_admin_user }}"
+            admin_password: "{{ domain_admin_password }}"
+            ou_paths:
+              linux: "{{ config_domain_ou_linux }}"
+              windows: "{{ config_domain_ou_windows }}"
+          targets:
+            linux_group: "linux_vms"
+            windows_group: "windows_vms"
+
+    - name: Validate project configuration
+      tags: [domain_join]
+      assert:
+        that:
+          - project_config is defined
+          - project_config.domain is defined
+          - project_config.targets is defined
+        fail_msg: "Project configuration is incomplete or invalid"
+        success_msg: "Project configuration validated successfully"
+
+# Pre-flight validation is handled by separate workflow step
+
+- name: Join Linux servers to domain
+  hosts: linux_vms
+  become: yes
+
+  vars:
+    domain_name: "{{ config_domain_name }}"
+    admin_user: "{{ domain_admin_user }}"
+    admin_password: "{{ domain_admin_password }}"
+    ou_paths:
+      linux: "{{ config_domain_ou_linux }}"
+      windows: "{{ config_domain_ou_windows }}"
+    linux_packages: "{{ config_domain_join_packages.split(',') }}"
+    workflow_mode: true
+
+  tasks:
+    - name: Debug - Show all variables
+      tags: [domain_join]
+      debug:
+        msg: |
+          Variables:
+          - domain_name: {{ domain_name | default('NOT_SET') }}
+          - admin_user: {{ admin_user | default('NOT_SET') }}
+          - admin_password: {{ admin_password | default('NOT_SET') }}
+          - linux_packages: {{ linux_packages | default('NOT_SET') }}
+          - workflow_mode: {{ workflow_mode | default('NOT_SET') }}
+
+    - name: Check if Linux servers are reachable
+      tags: [domain_join]
+      ping:
+      register: ping_result
+      failed_when: false
+
+    - name: Debug - Show ping result
+      tags: [domain_join]
+      debug:
+        msg: "Ping result: {{ ping_result | default('NOT_SET') }}"
+
+    - name: Fail if Linux servers are unreachable
+      tags: [domain_join]
+      fail:
+        msg: "Linux server {{ inventory_hostname }} is unreachable. Check network connectivity."
+      when: ping_result.ping != "pong"
+
+    - name: Include Linux domain join role
+      tags: [domain_join]
+      include_role:
+        name: roles/provisioning/join_domain
+        tasks_from: linux
+      register: linux_join_result
+
+    - name: Debug - Check if role was included
+      tags: [domain_join]
+      debug:
+        msg: "Role inclusion result: {{ linux_join_result | default('NOT_SET') }}"
+
+    - name: Set Linux join status
+      tags: [domain_join]
+      set_fact:
+        linux_join_success: "{{ linux_domain_join_success | default(false) }}"
+
+    - name: Report Linux join status
+      tags: [domain_join]
+      debug:
+        msg: "Linux domain join {{ 'SUCCESS' if linux_join_success else 'FAILED' }} for {{ inventory_hostname }}"
+      failed_when: not linux_join_success
+
+- name: Join Windows servers to domain
+  hosts: windows_vms
+
+  vars:
+    domain_name: "{{ config_domain_name }}"
+    admin_user: "{{ domain_admin_user }}"
+    admin_password: "{{ domain_admin_password }}"
+    ou_paths:
+      linux: "{{ config_domain_ou_linux }}"
+      windows: "{{ config_domain_ou_windows }}"
+    workflow_mode: true
+
+  tasks:
+    - name: Check if Windows servers are reachable
+      win_ping:
+      register: ping_result
+      failed_when: false
+
+    - name: Fail if Windows servers are unreachable
+      fail:
+        msg: "Windows server {{ inventory_hostname }} is unreachable. Check network connectivity."
+      when: ping_result.ping != "pong"
+
+    - name: Include Windows domain join role
+      include_role:
+        name: provisioning.join_domain
+        tasks_from: windows
+      register: windows_join_result
+
+    - name: Set Windows join status
+      set_fact:
+        windows_join_success: "{{ windows_domain_join_success | default(false) }}"
+
+    - name: Report Windows join status
+      debug:
+        msg: "Windows domain join {{ 'SUCCESS' if windows_join_success else 'FAILED' }} for {{ inventory_hostname }}"
+      failed_when: not windows_join_success
+
+- name: Post-join validation and reporting
+  hosts: localhost
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: Gather join results from all hosts
+      set_fact:
+        all_join_results: "{{ hostvars | dict2items(key_name='host', value_name='vars') | selectattr('vars.linux_join_success', 'defined') | selectattr('vars.windows_join_success', 'defined') | list }}"
+
+    - name: Calculate success rates
+      set_fact:
+        total_servers: "{{ (groups['linux_vms'] | default([])) | length + (groups['windows_vms'] | default([])) | length }}"
+        successful_joins: "{{ all_join_results | selectattr('vars.linux_join_success', 'equalto', true) | list | length + all_join_results | selectattr('vars.windows_join_success', 'equalto', true) | list | length }}"
+
+    - name: Display workflow summary
+      debug:
+        msg: |
+          🚀 Domain Join Workflow Summary
+          ================================
+          Total Servers: {{ total_servers }}
+          Successful Joins: {{ successful_joins }}
+          Failed Joins: {{ total_servers - successful_joins }}
+          Success Rate: {{ ((successful_joins / total_servers) * 100) | round(2) }}%
+          
+          {% if successful_joins == total_servers %}
+          ✅ ALL SERVERS SUCCESSFULLY JOINED TO DOMAIN
+          {% else %}
+          ⚠️  SOME SERVERS FAILED TO JOIN DOMAIN
+          {% endif %}
+
+    - name: Fail workflow if any joins failed
+      fail:
+        msg: "Domain join workflow failed. {{ total_servers - successful_joins }} out of {{ total_servers }} servers failed to join domain."
+      when: successful_joins < total_servers
+
+- name: Final domain membership validation
+  hosts: all
+
+  tasks:
+    - name: Include domain validation role
+      include_role:
+        name: provisioning.join_validation
+      register: validation_result
+
+    - name: Set final validation status
+      set_fact:
+        final_validation_success: "{{ validation_result.results | selectattr('failed', 'equalto', false) | list | length > 0 }}"
+
+    - name: Report final validation status
+      debug:
+        msg: "Final validation {{ 'SUCCESS' if final_validation_success else 'FAILED' }} for {{ inventory_hostname }}"
+      failed_when: not final_validation_success

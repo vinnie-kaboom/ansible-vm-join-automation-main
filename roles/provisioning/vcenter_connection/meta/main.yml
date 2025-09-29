@@ -1,0 +1,29 @@
+---
+# vCenter Connection Role Metadata
+# Role information and dependencies
+
+galaxy_info:
+  author: "Your Name"
+  description: "vCenter connection and validation role for domain join automation"
+  company: "Your Company"
+  license: "MIT"
+  min_ansible_version: "2.9"
+  platforms:
+    - name: EL
+      versions:
+        - 7
+        - 8
+        - 9
+    - name: Ubuntu
+      versions:
+        - 18.04
+        - 20.04
+        - 22.04
+  galaxy_tags:
+    - vcenter
+    - vmware
+    - connection
+    - validation
+    - domain-join
+
+dependencies: []

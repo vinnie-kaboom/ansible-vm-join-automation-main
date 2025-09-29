@@ -1,0 +1,33 @@
+---
+# vCenter Connection Role Configuration
+# This file contains default settings for vCenter connectivity and validation
+# All actual values are defined in configs/project_config.yml
+
+# Connection Settings
+vcenter_connection_timeout: "{{ project_config.vcenter.connection.timeout }}"
+vcenter_connection_retry_attempts: "{{ project_config.vcenter.connection.retry_attempts }}"
+vcenter_connection_retry_delay: "{{ project_config.vcenter.connection.retry_delay }}"
+vcenter_connection_validate_certs: "{{ project_config.vcenter.connection.validate_certs }}"
+
+# Legacy connection variables (for backward compatibility)
+vcenter_connection_retries: "{{ project_config.vcenter.connection.retry_attempts }}"
+vcenter_connection_delay: "{{ project_config.vcenter.connection.retry_delay }}"
+
+# Validation Settings
+vcenter_validation_check_permissions: "{{ project_config.vcenter.validation.check_permissions }}"
+vcenter_validation_check_api_version: "{{ project_config.vcenter.validation.check_api_version }}"
+vcenter_validation_check_datacenter_access: "{{ project_config.vcenter.validation.check_datacenter_access }}"
+vcenter_validation_check_cluster_access: "{{ project_config.vcenter.validation.check_cluster_access }}"
+vcenter_validation_min_api_version: "{{ project_config.vcenter.validation.min_api_version }}"
+
+# Logging Configuration
+vcenter_logging_enable_logging: "{{ project_config.vcenter.logging.enable_logging }}"
+vcenter_logging_log_level: "{{ project_config.vcenter.logging.log_level }}"
+vcenter_logging_log_path: "{{ project_config.vcenter.logging.log_path }}"
+vcenter_logging_log_format: "{{ project_config.vcenter.logging.log_format }}"
+
+# Error Handling
+vcenter_error_handling_max_retries: "{{ project_config.vcenter.error_handling.max_retries }}"
+vcenter_error_handling_retry_delay: "{{ project_config.vcenter.error_handling.retry_delay }}"
+vcenter_error_handling_fail_on_connection_error: "{{ project_config.vcenter.error_handling.fail_on_connection_error }}"
+vcenter_error_handling_fail_on_permission_error: "{{ project_config.vcenter.error_handling.fail_on_permission_error }}"

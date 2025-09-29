@@ -1,0 +1,40 @@
+---
+# Domain Join Validation Role - Main Tasks
+# Enhanced with workflow-friendly error handling and detailed reporting
+
+- name: Display system information
+  debug:
+    msg: |
+      🔍 Starting Domain Validation for {{ inventory_hostname }}
+      ========================================================
+      System: {{ ansible_system | default('Unknown') }}
+      OS Family: {{ ansible_os_family | default('Unknown') }}
+      Distribution: {{ ansible_distribution | default('Unknown') }}
+      Domain Target: {{ project_config.domain.name | default('Not configured') }}
+  tags: validation
+
+- name: Include Linux validation tasks
+  include_tasks: linux_validation.yml
+  when: ansible_system == 'Linux'
+  tags: validation
+
+- name: Include Windows validation tasks
+  include_tasks: windows_validation.yml
+  when: ansible_system == 'Win32NT' or ansible_os_family == 'Windows'
+  tags: validation
+
+- name: Set validation completion status
+  set_fact:
+    domain_validation_completed: true
+    validation_timestamp: "{{ ansible_date_time.iso8601 }}"
+  tags: validation
+
+- name: Display validation completion
+  debug:
+    msg: |
+      ✅ Domain Validation Completed for {{ inventory_hostname }}
+      ========================================================
+      Status: {{ 'SUCCESS' if domain_validation_completed else 'FAILED' }}
+      Timestamp: {{ validation_timestamp }}
+      Target Domain: {{ project_config.domain.name }}
+  tags: validation

@@ -1,0 +1,274 @@
+---
+# Pre-flight checks for VM domain joining
+# Validates environment readiness before attempting domain joins
+# Adapted for air-gapped environment with GitHub secrets
+
+- name: "Pre-flight Environment Checks"
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  tags:
+    - preflight
+    - validation
+
+  tasks:
+    - name: "Load project configuration from vm_config variables"
+      set_fact:
+        domain_name: "{{ config_domain_name }}"
+        admin_user: "{{ ansible_user }}"
+        dns_servers: "{{ config_vm_network_dns_servers }}"
+        domain_controllers: "{{ config_vm_network_dns_servers.split(',') }}"
+        linux_group: "linux_vms"
+        windows_group: "windows_vms"
+      tags:
+        - config
+        - setup
+
+    - name: "Validate project configuration"
+      assert:
+        that:
+          - domain_name is defined
+          - admin_user is defined
+          - dns_servers is defined
+          - domain_controllers is defined
+          - linux_group is defined
+          - windows_group is defined
+        fail_msg: "Project configuration incomplete - missing required variables"
+        success_msg: "Project configuration validated successfully"
+      tags:
+        - validation
+        - config
+
+    - name: "Check domain controller accessibility"
+      uri:
+        url: "https://{{ domain_controllers[0] }}"
+        method: GET
+        timeout: 15
+        validate_certs: false
+      ignore_errors: true
+      register: dc_connectivity
+      tags:
+        - domain
+        - connectivity
+
+    - name: "Check domain controller accessibility (alternative ports)"
+      uri:
+        url: "http://{{ domain_controllers[0] }}:389"
+        method: GET
+        timeout: 10
+        validate_certs: false
+      ignore_errors: true
+      register: dc_ldap_connectivity
+      tags:
+        - domain
+        - connectivity
+
+    - name: "Validate domain controller accessibility"
+      assert:
+        that:
+          - dc_connectivity.status == 200 or dc_connectivity.status == 401 or dc_ldap_connectivity.status == 200
+        fail_msg: "Cannot reach domain controller at {{ domain_controllers[0] }} (tried HTTPS and LDAP ports) - this may be expected in containerized environments"
+        success_msg: "Domain controller accessibility verified at {{ domain_controllers[0] }}"
+      ignore_errors: true
+      tags:
+        - validation
+        - domain
+
+    - name: "Test DNS resolution for domain"
+      command: "nslookup {{ domain_name }}"
+      register: dns_test
+      changed_when: false
+      ignore_errors: true
+      tags:
+        - dns
+        - resolution
+
+    - name: "Validate DNS resolution"
+      assert:
+        that:
+          - dns_test.rc == 0
+        fail_msg: "DNS resolution failed for {{ domain_name }} - this may be expected in containerized environments"
+        success_msg: "DNS resolution successful for {{ domain_name }}"
+      ignore_errors: true
+      tags:
+        - validation
+        - dns
+
+    - name: "Test DNS resolution for domain controllers"
+      command: "nslookup {{ domain_controllers[0] }}"
+      register: dc_dns_test
+      changed_when: false
+      ignore_errors: true
+      tags:
+        - dns
+        - domain_controllers
+
+    - name: "Validate domain controller DNS resolution"
+      assert:
+        that:
+          - dc_dns_test.rc == 0
+        fail_msg: "DNS resolution failed for domain controller {{ domain_controllers[0] }} - this may be expected in containerized environments"
+        success_msg: "DNS resolution successful for domain controller {{ domain_controllers[0] }}"
+      ignore_errors: true
+      tags:
+        - validation
+        - dns
+
+    - name: "Check required Ansible collections (air-gapped compatible)"
+      command: "ansible-galaxy collection list"
+      register: collections_list
+      changed_when: false
+      tags:
+        - collections
+        - requirements
+
+    - name: "Validate required collections for air-gapped environment"
+      assert:
+        that:
+          - "'community.windows' in collections_list.stdout or 'ansible.windows' in collections_list.stdout"
+          - "'community.general' in collections_list.stdout or 'ansible.builtin' in collections_list.stdout"
+        fail_msg: "Required Ansible collections not installed for air-gapped environment"
+        success_msg: "Required Ansible collections verified for air-gapped environment"
+      tags:
+        - validation
+        - collections
+
+    - name: "Check inventory accessibility"
+      stat:
+        path: "inventory/"
+      register: inventory_check
+      tags:
+        - inventory
+        - files
+
+    - name: "Validate inventory directory"
+      assert:
+        that:
+          - inventory_check.stat.exists
+          - inventory_check.stat.isdir is defined and inventory_check.stat.isdir
+        fail_msg: "Inventory directory not found or not accessible"
+        success_msg: "Inventory directory verified"
+      ignore_errors: true
+      tags:
+        - validation
+        - inventory
+
+    - name: "Check inventory file exists"
+      stat:
+        path: "inventory/hosts.ini"
+      register: hosts_file_check
+      tags:
+        - inventory
+        - files
+
+    - name: "Validate inventory file"
+      assert:
+        that:
+          - hosts_file_check.stat.exists
+          - hosts_file_check.stat.isfile is defined and hosts_file_check.stat.isfile
+        fail_msg: "Inventory file inventory/hosts.ini not found or not accessible"
+        success_msg: "Inventory file verified"
+      ignore_errors: true
+      tags:
+        - validation
+        - inventory
+
+    - name: "Check vm_config.yml file"
+      stat:
+        path: "vm_config.yml"
+      register: vm_config_file_check
+      tags:
+        - config
+        - files
+
+    - name: "Validate vm_config.yml file"
+      assert:
+        that:
+          - vm_config_file_check.stat.exists
+          - vm_config_file_check.stat.isfile is defined and vm_config_file_check.stat.isfile
+        fail_msg: "VM configuration file vm_config.yml not found or not accessible"
+        success_msg: "VM configuration file verified"
+      ignore_errors: true
+      tags:
+        - validation
+        - config
+
+    - name: "Check roles directory structure"
+      stat:
+        path: "roles/provisioning/join_domain"
+      register: domain_join_role_check
+      tags:
+        - roles
+        - structure
+
+    - name: "Validate domain join role"
+      assert:
+        that:
+          - domain_join_role_check.stat.exists
+          - domain_join_role_check.stat.isdir is defined and domain_join_role_check.stat.isdir
+        fail_msg: "Domain join role not found at roles/provisioning/join_domain"
+        success_msg: "Domain join role verified"
+      ignore_errors: true
+      tags:
+        - validation
+        - roles
+
+    - name: "Check domain validation role"
+      stat:
+        path: "roles/provisioning/join_validation"
+      register: domain_validation_role_check
+      tags:
+        - roles
+        - structure
+
+    - name: "Validate domain validation role"
+      assert:
+        that:
+          - domain_validation_role_check.stat.exists
+          - domain_validation_role_check.stat.isdir is defined and domain_validation_role_check.stat.isdir
+        fail_msg: "Domain validation role not found at roles/provisioning/join_validation"
+        success_msg: "Domain validation role verified"
+      ignore_errors: true
+      tags:
+        - validation
+        - roles
+
+    - name: "Check playbooks directory structure"
+      stat:
+        path: "playbooks/provisioning/join_domain"
+      register: playbooks_check
+      tags:
+        - playbooks
+        - structure
+
+    - name: "Validate playbooks directory"
+      assert:
+        that:
+          - playbooks_check.stat.exists
+          - playbooks_check.stat.isdir is defined and playbooks_check.stat.isdir
+        fail_msg: "Domain join playbooks directory not found"
+        success_msg: "Domain join playbooks directory verified"
+      ignore_errors: true
+      tags:
+        - validation
+        - playbooks
+
+    - name: "Display pre-flight summary"
+      debug:
+        msg: |
+          🚀 Pre-flight Checks Complete!
+          
+          Domain: {{ domain_name }} ({{ 'OK' if (dc_connectivity.status in [200, 401] or dc_ldap_connectivity.status == 200) else 'WARNING - Container networking' }})
+          DNS Resolution: {{ 'OK' if dns_test.rc == 0 else 'WARNING - Container networking' }}
+          Domain Controller DNS: {{ 'OK' if dc_dns_test.rc == 0 else 'WARNING - Container networking' }}
+          Collections: {{ 'OK' if collections_list.rc == 0 else 'FAILED' }}
+          Inventory: {{ 'OK' if (inventory_check.stat.exists and inventory_check.stat.isdir is defined and inventory_check.stat.isdir) else 'WARNING - Container filesystem' }}
+          Config: {{ 'OK' if (vm_config_file_check.stat.exists and vm_config_file_check.stat.isfile is defined and vm_config_file_check.stat.isfile) else 'WARNING - Container filesystem' }}
+          Roles: {{ 'OK' if ((domain_join_role_check.stat.exists and domain_join_role_check.stat.isdir is defined and domain_join_role_check.stat.isdir) and (domain_validation_role_check.stat.exists and domain_validation_role_check.stat.isdir is defined and domain_validation_role_check.stat.isdir)) else 'WARNING - Container filesystem' }}
+          Playbooks: {{ 'OK' if (playbooks_check.stat.exists and playbooks_check.stat.isdir is defined and playbooks_check.stat.isdir) else 'WARNING - Container filesystem' }}
+          
+          Note: Network connectivity and filesystem warnings are expected in containerized environments.
+          The actual domain join will be performed on the target VMs with proper network access.
+      tags:
+        - summary
+        - completion

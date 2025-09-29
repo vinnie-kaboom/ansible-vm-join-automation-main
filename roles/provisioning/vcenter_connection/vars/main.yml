@@ -1,0 +1,30 @@
+---
+# vCenter Connection Role - Variables
+# Default variable values for vCenter connectivity
+# All actual values are defined in configs/project_config.yml
+
+# vCenter Connection Variables
+vcenter_connection_host: "{{ project_config.vcenter.host }}"
+vcenter_connection_user: "{{ project_config.vcenter.user }}"
+vcenter_connection_password: "{{ project_config.vcenter.password }}"
+
+# vCenter Infrastructure Variables (from VM config)
+vcenter_infrastructure_datacenter: "{{ project_config.vcenter.datacenter }}"
+vcenter_infrastructure_cluster: "{{ project_config.vcenter.cluster }}"
+vcenter_infrastructure_datastore: "{{ project_config.vcenter.datastore }}"
+vcenter_infrastructure_folder: "{{ project_config.vcenter.folder }}"
+
+# vCenter API Configuration
+vcenter_api_version: "{{ project_config.vcenter.api_version }}"
+vcenter_api_port: "{{ project_config.vcenter.port }}"
+vcenter_api_protocol: "{{ project_config.vcenter.protocol }}"
+
+# Connection Retry Configuration
+vcenter_retry_max_retries: "{{ project_config.vcenter.connection.retry_attempts }}"
+vcenter_retry_delay: "{{ project_config.vcenter.connection.retry_delay }}"
+vcenter_retry_timeout: "{{ project_config.vcenter.connection.timeout }}"
+
+# SSL/TLS Configuration
+vcenter_ssl_verify: "{{ project_config.vcenter.ssl_verify }}"
+vcenter_ssl_cert_path: "{{ project_config.vcenter.ssl_cert_path }}"
+vcenter_ssl_key_path: "{{ project_config.vcenter.ssl_key_path }}"

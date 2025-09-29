@@ -1,0 +1,52 @@
+---
+# vCenter Connection Role - Logging Tasks
+# Sets up logging for vCenter connection operations
+
+- name: "Create vCenter logging directory"
+  file:
+    path: "{{ vcenter_logging_log_path }}"
+    state: directory
+    mode: '0755'
+  tags:
+    - vcenter
+    - logging
+    - setup
+
+- name: "Set vCenter logging configuration"
+  set_fact:
+    vcenter_log_config:
+      level: "{{ vcenter_logging_log_level }}"
+      path: "{{ vcenter_logging_log_path }}"
+      format: "{{ vcenter_logging_log_format }}"
+      enable: true
+  tags:
+    - vcenter
+    - logging
+    - configuration
+
+- name: "Log vCenter connection attempt"
+  debug:
+    msg: |
+      vCenter Connection Attempt:
+      Host: {{ vcenter_host }}
+      User: {{ vcenter_user }}
+      Timeout: {{ vcenter_connection_timeout }}
+      Retries: {{ vcenter_connection_retry_attempts }}
+      Validate Certs: {{ vcenter_connection_validate_certs }}
+  tags:
+    - vcenter
+    - logging
+    - connection
+
+- name: "Log vCenter connection parameters"
+  debug:
+    msg: |
+      vCenter Connection Parameters:
+      Connection Timeout: {{ vcenter_connection_timeout }}
+      Retry Attempts: {{ vcenter_connection_retry_attempts }}
+      Retry Delay: {{ vcenter_connection_retry_delay }}
+      Validate Certificates: {{ vcenter_connection_validate_certs }}
+  tags:
+    - vcenter
+    - logging
+    - parameters
