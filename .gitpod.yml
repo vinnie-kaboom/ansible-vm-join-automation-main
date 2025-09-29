@@ -1,0 +1,4 @@
+vscode:
+  extensions:
+    - github.copilot-chat
+  version: latest
