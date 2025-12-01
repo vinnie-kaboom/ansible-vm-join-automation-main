@@ -1,10 +1,10 @@
 # ===================================================================================
-# xxxx.xxx LINUX - Linux-Specific Configuration
+# DOMAIN LINUX - Linux-Specific Configuration
 # ===================================================================================
 #
 # PURPOSE:
-#   Linux-specific settings for xxxx.xxx domain
-#   All hosts in xxxx_xxx_linux group inherit these variables
+#   Linux-specific settings for domain
+#   All hosts in domain_linux group inherit these variables
 # ===================================================================================
 
 # Define the final variable the playbook will use

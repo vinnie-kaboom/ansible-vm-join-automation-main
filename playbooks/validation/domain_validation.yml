@@ -22,7 +22,7 @@
 #   - Required secrets: domain_admin_user, domain_admin_password
 
 - name: Domain Join Validation
-  hosts: "{{ target_hosts | default('xxxx_xxx_linux,xxxx_xxx_windows') }}"
+  hosts: "{{ target_hosts | default('domain_linux,domain_windows') }}"
   gather_facts: yes
   vars:
     # Use inventory variables directly from group_vars/host_vars

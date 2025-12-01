@@ -1,24 +1,24 @@
 # ===================================================================================
-# xxxx.xxxx DOMAIN - Domain-Specific Configuration
+# NETWORK_XX ORGENGR - Network/Domain-Specific Configuration
 # ===================================================================================
 #
 # PURPOSE:
-#   Domain-specific settings for xxxx.xxx environment
-#   All hosts in xxxx_xxx group inherit these variables
+#   Network and domain-specific settings for Network XX OrgEngr environment
+#   All hosts in network_xx_orgengr group inherit these variables
 # ===================================================================================
 
 # --- Domain-Specific Configuration ---
-domain_name: "xxxx.xxx"
-domain_realm: "xxxx.xxx"
+domain_name: "example.com"
+domain_realm: "EXAMPLE.COM"
 
 # Domain Admin Credentials (from GitHub Secrets)
 domain_admin_user: "{{ secrets.DOMAIN_ADMIN_USER | default('') }}"
 domain_admin_password: "{{ secrets.DOMAIN_ADMIN_PASSWORD | default('') }}"
 
 # Domain Controllers/DNS specific to this domain
-dns_server: "xxxxxx04.xxxx.xxx"
-domain_controller: "xxxxxc04.xxxx.xxx"
+dns_server: "10.x.x.x"
+domain_controller: "dc01.example.com"
 
 # Default OUs for machines in this domain (can be overridden by OS group)
-linux_ou: "OU=VA,OU=DEV OU,DC=xxxx,DC=xxx"
-windows_ou: "OU=Servers,DC=xxxx,DC=xxx"
+linux_ou: "OU=Linux,OU=Servers,DC=example,DC=com"
+windows_ou: "OU=Windows,OU=Servers,DC=example,DC=com"

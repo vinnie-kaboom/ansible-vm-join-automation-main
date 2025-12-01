@@ -1,10 +1,10 @@
 # ===================================================================================
-# xxxx.xxx WINDOWS - Windows-Specific Configuration
+# DOMAIN WINDOWS - Windows-Specific Configuration
 # ===================================================================================
 #
 # PURPOSE:
-#   Windows-specific settings for xxxx.xxx domain
-#   All hosts in xxxx_xxx_windows group inherit these variables
+#   Windows-specific settings for domain
+#   All hosts in domain_windows group inherit these variables
 # ===================================================================================
 
 # Define the final variable the playbook will use

@@ -17,7 +17,7 @@
 #   6. Set validation success status with detailed results
 #
 # REQUIRED VARIABLES:
-#   - config_domain_name: Domain name to validate (e.g., "xxxx.xxx")
+#   - config_domain_name: Domain name to validate (e.g., "example.com")
 #   - config_vm_name: VM hostname for computer account verification
 #   - config_domain_ou_linux: Organizational Unit path for Linux computers
 #

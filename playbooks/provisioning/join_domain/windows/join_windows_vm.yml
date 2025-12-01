@@ -15,9 +15,9 @@
 #       Modules: win_shell, win_domain_membership, win_reboot, win_feature
 #
 # INVENTORY REQUIREMENTS:
-#   - Host must be in 'xxxx_xxx_windows' group
-#   - Variables defined in group_vars/xxxx_xxx.yml:
-#       • domain_name: AD domain (e.g., xxxx.xxx)
+#   - Host must be in 'domain_windows' group
+#   - Variables defined in group_vars/network_xx_orgengr.yml:
+#       • domain_name: AD domain (e.g., example.com)
 #       • domain_admin_user: Admin username with join privileges
 #       • domain_admin_password: Admin password
 #       • windows_ou: OU path for computer account (optional)
@@ -43,7 +43,7 @@
 # ==============================================================================
 
 - name: Join Windows VM to Domain
-  hosts: xxxx_xxx_windows
+  hosts: domain_windows
   gather_facts: false
 
   vars:

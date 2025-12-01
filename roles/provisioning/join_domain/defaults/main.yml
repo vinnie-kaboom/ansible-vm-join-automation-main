@@ -5,9 +5,9 @@
 # These are just fallbacks
 
 # Domain settings - loaded from inventory
-# domain_name: defined in group_vars/xxxx_xxx.yml
-# domain_admin_user: defined in group_vars/xxxx_xxx.yml (from secrets)
-# domain_admin_password: defined in group_vars/xxxx_xxx.yml (from secrets)
+# domain_name: defined in group_vars/network_xx_orgengr.yml
+# domain_admin_user: defined in group_vars/network_xx_orgengr.yml (from secrets)
+# domain_admin_password: defined in group_vars/network_xx_orgengr.yml (from secrets)
 
 # CRITICAL: Variable name mapping for task compatibility
 # Tasks use 'admin_user' and 'admin_password' for simplicity
@@ -22,10 +22,10 @@ ou_paths:
   windows: "{{ windows_ou | default('') }}"
 
 # Linux packages for domain join
-# NOTE: This is defined in inventory/group_vars/xxxx_xxx_linux.yml
+# NOTE: This is defined in inventory/group_vars/domain_linux.yml
 # The inventory value takes precedence - this is just a fallback for other environments
 linux_packages: []
 
 # Computer description in AD
-# NOTE: This should be defined per-host in inventory/host_vars/<hostname>.yml
+# NOTE: This should be defined per-host in inventory/host_vars/ansible-test-machine.yml
 # Variable name: config_vm_description

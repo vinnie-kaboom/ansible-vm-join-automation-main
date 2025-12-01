@@ -16,9 +16,9 @@ target_vm_os_type: "linux"
 config_vm_description: "Mijo."
 
 # --- Example of an Override ---
-# Overrides the 'target_ou' set in xxxx_xxx_linux.yml
+# Overrides the 'target_ou' set in domain_linux.yml
 # Uncomment this if you need a different OU for this specific host
-# target_ou: "OU=VA,OU=TESTING,DC=xxxx,DC=xxx"
+# target_ou: "OU=Testing,OU=Servers,DC=example,DC=com"
 
 # --- AVOID REDUNDANCY ---
 # DO NOT define ansible_host, ansible_user, or ansible_connection here

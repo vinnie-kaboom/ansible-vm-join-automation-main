@@ -13,24 +13,24 @@
 #
 # USAGE:
 #   ansible-playbook playbooks/site.yml -i inventory/hosts.ini --tags domain_join
-#   ansible-playbook playbooks/site.yml -i inventory/hosts.ini --limit xxxx_xxx_linux --tags domain_join
+#   ansible-playbook playbooks/site.yml -i inventory/hosts.ini --limit domain_linux --tags domain_join
 #
 # HOST GROUPS:
 #   - runner: GitHub Actions runner / control node
-#   - xxxx_xxx_linux: Linux virtual machines to join to domain
-#   - xxxx_xxx_windows: Windows virtual machines to join to domain
+#   - domain_linux: Linux virtual machines to join to domain
+#   - domain_windows: Windows virtual machines to join to domain
 
 # ================================================================================
 # DOMAIN JOIN ORCHESTRATION
 # ================================================================================
 
 # Import Linux domain join playbook
-# The playbook will skip gracefully if no hosts match the xxxx_xxx_linux group
+# The playbook will skip gracefully if no hosts match the domain_linux group
 - import_playbook: provisioning/join_domain/linux/join_linux_vm.yml
   tags: [domain_join, linux]
 
 # Import Windows domain join playbook
-# The playbook will skip gracefully if no hosts match the xxxx_xxx_windows group
+# The playbook will skip gracefully if no hosts match the domain_windows group
 - import_playbook: provisioning/join_domain/windows/join_windows_vm.yml
   tags: [domain_join, windows]
 

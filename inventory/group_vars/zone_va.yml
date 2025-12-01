@@ -1,0 +1,21 @@
+# ===================================================================================
+# ZONE VA - Zone-Level Configuration
+# ===================================================================================
+#
+# PURPOSE:
+#   Zone-wide settings for VA environment
+#   All hosts in zone_va inherit these variables
+# ===================================================================================
+
+# Zone identification
+zone_name: "zone-va"
+zone_location: "Virginia"
+
+# Zone-wide network settings (can be overridden by network groups)
+# zone_ntp_servers:
+#   - "10.x.x.x"
+#   - "10.x.x.x"
+
+# Zone-wide monitoring/logging (optional)
+# syslog_server: "10.x.x.x"
+# monitoring_server: "10.x.x.x"

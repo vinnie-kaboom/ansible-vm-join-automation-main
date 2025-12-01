@@ -14,9 +14,9 @@
 #   - Requires root/sudo access (become: yes)
 #
 # INVENTORY REQUIREMENTS:
-#   - Host must be in 'xxxx_xxx_linux' group
-#   - Variables defined in group_vars/xxxx_xxx.yml:
-#       • domain_name: AD domain (e.g., xxxx.xxx)
+#   - Host must be in 'domain_linux' group
+#   - Variables defined in group_vars/network_xx_orgengr.yml:
+#       • domain_name: AD domain (e.g., example.com)
 #       • domain_admin_user: Admin username with join privileges
 #       • domain_admin_password: Admin password
 #       • linux_ou: OU path for computer account (optional)
@@ -37,7 +37,7 @@
 # ==============================================================================
 
 - name: Join Linux VM to Domain
-  hosts: xxxx_xxx_linux
+  hosts: domain_linux
   become: yes
 
   vars:
