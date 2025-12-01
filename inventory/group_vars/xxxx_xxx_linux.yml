@@ -1,0 +1,28 @@
+# ===================================================================================
+# xxxx.xxx LINUX - Linux-Specific Configuration
+# ===================================================================================
+#
+# PURPOSE:
+#   Linux-specific settings for xxxx.xxx domain
+#   All hosts in cce3_gpc_linux group inherit these variables
+# ===================================================================================
+
+# Define the final variable the playbook will use
+target_ou: "{{ linux_ou }}"
+
+# Linux-specific connection settings
+ansible_connection: ssh
+ansible_python_interpreter: "/usr/bin/python3"
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30'
+
+# Linux Domain Join Configuration
+linux_packages:
+  - realmd
+  - sssd
+  - oddjob-mkhomedir
+  - samba-common-tools
+  - krb5-workstation
+  - adcli
+
+# Workflow Mode (for automation)
+workflow_mode: true

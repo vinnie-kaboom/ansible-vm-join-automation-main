@@ -1,33 +1,22 @@
 ---
-# vCenter Connection Role Configuration
-# This file contains default settings for vCenter connectivity and validation
-# All actual values are defined in configs/project_config.yml
+# vCenter Connection Role - Default Configuration
+# Default settings for vCenter connectivity and validation
+# These can be overridden in inventory group_vars or host_vars
 
-# Connection Settings
-vcenter_connection_timeout: "{{ project_config.vcenter.connection.timeout }}"
-vcenter_connection_retry_attempts: "{{ project_config.vcenter.connection.retry_attempts }}"
-vcenter_connection_retry_delay: "{{ project_config.vcenter.connection.retry_delay }}"
-vcenter_connection_validate_certs: "{{ project_config.vcenter.connection.validate_certs }}"
+# Connection Settings (with sensible defaults)
+# These are fallback values only. The actual values are set from inventory in validate_vars.yml
+vcenter_connection_timeout: 30
+vcenter_connection_retry_attempts: 3
+vcenter_connection_retry_delay: 5
+vcenter_connection_validate_certs: false
 
-# Legacy connection variables (for backward compatibility)
-vcenter_connection_retries: "{{ project_config.vcenter.connection.retry_attempts }}"
-vcenter_connection_delay: "{{ project_config.vcenter.connection.retry_delay }}"
+# Validation Settings (disabled by default for simplicity)
+vcenter_validation_check_permissions: false
+vcenter_validation_check_api_version: false
+vcenter_validation_check_datacenter_access: false
+vcenter_validation_check_cluster_access: false
 
-# Validation Settings
-vcenter_validation_check_permissions: "{{ project_config.vcenter.validation.check_permissions }}"
-vcenter_validation_check_api_version: "{{ project_config.vcenter.validation.check_api_version }}"
-vcenter_validation_check_datacenter_access: "{{ project_config.vcenter.validation.check_datacenter_access }}"
-vcenter_validation_check_cluster_access: "{{ project_config.vcenter.validation.check_cluster_access }}"
-vcenter_validation_min_api_version: "{{ project_config.vcenter.validation.min_api_version }}"
-
-# Logging Configuration
-vcenter_logging_enable_logging: "{{ project_config.vcenter.logging.enable_logging }}"
-vcenter_logging_log_level: "{{ project_config.vcenter.logging.log_level }}"
-vcenter_logging_log_path: "{{ project_config.vcenter.logging.log_path }}"
-vcenter_logging_log_format: "{{ project_config.vcenter.logging.log_format }}"
-
-# Error Handling
-vcenter_error_handling_max_retries: "{{ project_config.vcenter.error_handling.max_retries }}"
-vcenter_error_handling_retry_delay: "{{ project_config.vcenter.error_handling.retry_delay }}"
-vcenter_error_handling_fail_on_connection_error: "{{ project_config.vcenter.error_handling.fail_on_connection_error }}"
-vcenter_error_handling_fail_on_permission_error: "{{ project_config.vcenter.error_handling.fail_on_permission_error }}"
+# Logging Configuration (disabled by default)
+vcenter_logging_enable_logging: false
+vcenter_logging_log_level: "info"
+vcenter_logging_log_path: "/tmp/vcenter.log"

@@ -1,7 +1,25 @@
 ---
 # Domain Join Role - Main Tasks
 # Entry point for domain join operations
+#
+# ANSIBLE COLLECTIONS USED:
+#   - ansible.builtin (implicit) - Core modules only
+#   - community.windows (in windows.yml) - EXTERNAL: Required for Windows operations
+#
+# External Collection Dependencies:
+#   Linux:   NONE (uses only ansible.builtin)
+#   Windows: community.windows >= 4.0.0 (must be installed)
 
-- name: Include OS-specific domain join tasks
-  include_tasks: "{{ ansible_os_family | lower }}.yml"
-  when: ansible_os_family is defined
+- name: Include Linux domain join tasks
+  include_tasks: linux.yml
+  # Run for any Linux system (RHEL, CentOS, Ubuntu, Debian, etc.)
+  # Primary: Check if kernel is Linux
+  # Fallback: Check if it's a known Linux family (in case kernel detection fails)
+  when: ansible_system == 'Linux' or ansible_os_family in ['RedHat', 'Debian', 'Suse', 'Archlinux', 'Alpine']
+
+- name: Include Windows domain join tasks
+  include_tasks: windows.yml
+  # Run for any Windows system (Server 2016/2019/2022, Windows 10/11, etc.)
+  # Primary: Check if kernel is Win32NT
+  # Fallback: Check if OS family is Windows (in case kernel detection fails)
+  when: ansible_system == 'Win32NT' or ansible_os_family == 'Windows'

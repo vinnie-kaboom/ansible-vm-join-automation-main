@@ -41,12 +41,12 @@
     - validation
     - credentials
 
-- name: "Set vCenter connection values from project config"
+- name: "Set vCenter connection values from inventory variables"
   set_fact:
-    vcenter_connection_timeout: "{{ project_config.vcenter.connection.timeout }}"
-    vcenter_connection_retry_attempts: "{{ project_config.vcenter.connection.retry_attempts }}"
-    vcenter_connection_retry_delay: "{{ project_config.vcenter.connection.retry_delay }}"
-    vcenter_connection_validate_certs: "{{ project_config.vcenter.connection.validate_certs }}"
+    vcenter_connection_timeout: "{{ vcenter_timeout | default(30) }}"
+    vcenter_connection_retry_attempts: "{{ vcenter_retry_attempts | default(3) }}"
+    vcenter_connection_retry_delay: "{{ vcenter_retry_delay | default(5) }}"
+    vcenter_connection_validate_certs: "{{ vcenter_validate_certs | default(false) }}"
   tags:
     - vcenter
     - validation

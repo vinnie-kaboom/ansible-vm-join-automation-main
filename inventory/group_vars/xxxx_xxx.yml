@@ -1,0 +1,24 @@
+# ===================================================================================
+# xxxx.xxxx DOMAIN - Domain-Specific Configuration
+# ===================================================================================
+#
+# PURPOSE:
+#   Domain-specific settings for xxxx.xxx environment
+#   All hosts in xxxx_xxx group inherit these variables
+# ===================================================================================
+
+# --- Domain-Specific Configuration ---
+domain_name: "xxxx.xxx"
+domain_realm: "xxxx.xxx"
+
+# Domain Admin Credentials (from GitHub Secrets)
+domain_admin_user: "{{ secrets.DOMAIN_ADMIN_USER | default('') }}"
+domain_admin_password: "{{ secrets.DOMAIN_ADMIN_PASSWORD | default('') }}"
+
+# Domain Controllers/DNS specific to this domain
+dns_server: "xxxxxx04.xxxx.xxx"
+domain_controller: "xxxxxc04.xxxx.xxx"
+
+# Default OUs for machines in this domain (can be overridden by OS group)
+linux_ou: "OU=VA,OU=DEV OU,DC=xxxx,DC=xxx"
+windows_ou: "OU=Servers,DC=xxxx,DC=xxx"

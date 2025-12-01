@@ -1,14 +1,57 @@
 ---
-# Join Linux VM to Domain
-# Simple and clean domain join for Linux servers
+# ==============================================================================
+# Linux Domain Join Playbook
+# ==============================================================================
+#
+# PURPOSE:
+#   Joins Linux VMs to Active Directory domain using SSSD and realmd
+#
+# SUPPORTED OS:
+#   RHEL/CentOS/Rocky Linux 7-9, Ubuntu 18.04+, Debian 10+
+#
+# DEPENDENCIES:
+#   - ansible.builtin only (no external collections required)
+#   - Requires root/sudo access (become: yes)
+#
+# INVENTORY REQUIREMENTS:
+#   - Host must be in 'xxxx_xxx_linux' group
+#   - Variables defined in group_vars/xxxx_xxx.yml:
+#       • domain_name: AD domain (e.g., xxxx.xxx)
+#       • domain_admin_user: Admin username with join privileges
+#       • domain_admin_password: Admin password
+#       • linux_ou: OU path for computer account (optional)
+#
+# WORKFLOW:
+#   1. Validate prerequisites (DNS, connectivity, packages)
+#   2. Configure Kerberos (krb5.conf)
+#   3. Join domain via realm/adcli
+#   4. Configure SSSD for authentication
+#   5. Verify domain membership
+#
+# USAGE:
+#   # Via site.yml with tag
+#   ansible-playbook -i inventory/hosts.ini playbooks/site.yml --tags domain_join
+#
+#   # Direct execution
+#   ansible-playbook -i inventory/hosts.ini playbooks/provisioning/join_domain/linux/join_linux_vm.yml
+# ==============================================================================
 
 - name: Join Linux VM to Domain
-  hosts: "{{ targets.linux_group }}"
+  hosts: xxxx_xxx_linux
   become: yes
 
-  tasks:
-    - name: Include Linux domain join role
-      include_role:
-        name: provisioning.join_domain
-        tasks_from: linux
+  vars:
+    # Map inventory variables for role compatibility (join and validation)
+    config_vm_name: "{{ vm_name | default(inventory_hostname) }}"
+    config_domain_name: "{{ domain_name }}"
+    config_domain_realm: "{{ domain_name | upper }}"
+    config_domain_ou_linux: "{{ linux_ou | default('') }}"
+    # config_vm_description is defined in host_vars (per-host description)
 
+  tasks:
+    - name: Execute Linux domain join workflow
+      include_role:
+        name: provisioning/join_domain
+        tasks_from: linux
+      tags: [domain_join, linux]
+      # Implementation: roles/provisioning/join_domain/tasks/linux.yml

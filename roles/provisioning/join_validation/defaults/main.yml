@@ -1,8 +1,9 @@
 ---
 # Domain Validation Role Defaults
-# Variable references to centralized project configuration
-# All actual values are defined in configs/project_config.yml
+# Default values for validation settings
+# Can be overridden in inventory group_vars or host_vars
 
-# Validation settings - references to project config
-validation_timeout: "{{ project_config.validation.timeout }}"
-validation_retries: "{{ project_config.validation.retries }}"
+# No default values currently required
+# This role uses validation logic without configurable timeout/retry parameters
+# If needed in the future, add them here and they can be overridden in inventory
+

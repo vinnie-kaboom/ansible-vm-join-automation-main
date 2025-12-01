@@ -1,12 +1,63 @@
 ---
-# Join Windows VM to Domain
-# Simple and clean domain join for Windows servers
+# ==============================================================================
+# Windows Domain Join Playbook
+# ==============================================================================
+#
+# PURPOSE:
+#   Joins Windows VMs to Active Directory domain using native Windows methods
+#
+# SUPPORTED OS:
+#   Windows Server 2012 R2, 2016, 2019, 2022
+#
+# DEPENDENCIES:
+#   - ansible.builtin (core modules)
+#   - community.windows >= 4.0.0 (REQUIRED - install via ansible-galaxy)
+#       Modules: win_shell, win_domain_membership, win_reboot, win_feature
+#
+# INVENTORY REQUIREMENTS:
+#   - Host must be in 'xxxx_xxx_windows' group
+#   - Variables defined in group_vars/xxxx_xxx.yml:
+#       • domain_name: AD domain (e.g., xxxx.xxx)
+#       • domain_admin_user: Admin username with join privileges
+#       • domain_admin_password: Admin password
+#       • windows_ou: OU path for computer account (optional)
+#   - WinRM configured and accessible:
+#       • ansible_connection: winrm
+#       • ansible_winrm_transport: ntlm or kerberos
+#       • ansible_winrm_server_cert_validation: ignore (if using self-signed certs)
+#
+# WORKFLOW:
+#   1. Validate prerequisites (DNS, LDAP, Kerberos, time sync)
+#   2. Install RSAT-AD-PowerShell if needed
+#   3. Test domain admin credentials
+#   4. Join domain (win_domain_membership or PowerShell)
+#   5. Reboot to complete join
+#   6. Verify domain membership
+#
+# USAGE:
+#   # Via site.yml with tag
+#   ansible-playbook -i inventory/hosts.ini playbooks/site.yml --tags domain_join
+#
+#   # Direct execution
+#   ansible-playbook -i inventory/hosts.ini playbooks/provisioning/join_domain/windows/join_windows_vm.yml
+# ==============================================================================
 
 - name: Join Windows VM to Domain
-  hosts: "{{ targets.windows_group }}"
+  hosts: xxxx_xxx_windows
+  gather_facts: false
+
+  vars:
+    # Map inventory variables for role compatibility (join and validation)
+    config_vm_name: "{{ vm_name | default(inventory_hostname) }}"
+    config_domain_name: "{{ domain_name }}"
+    config_domain_realm: "{{ domain_name | upper }}"
+    config_domain_ou_windows: "{{ windows_ou | default('') }}"
+    # config_vm_description is defined in host_vars (per-host description)
 
   tasks:
-    - name: Include Windows domain join role
+    - name: Execute Windows domain join workflow
       include_role:
-        name: provisioning.join_domain
+        name: provisioning/join_domain
         tasks_from: windows
+      tags: [domain_join, windows]
+      # Implementation: roles/provisioning/join_domain/tasks/windows.yml

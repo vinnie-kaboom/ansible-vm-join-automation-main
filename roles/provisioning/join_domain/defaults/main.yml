@@ -1,20 +1,31 @@
 ---
 # Domain Join Role Defaults
-# Variable references to centralized project configuration
-# All actual values are defined in configs/project_config.yml
+# Default values for domain join operations
+# All values should be defined in inventory group_vars
+# These are just fallbacks
 
-# Domain settings - references to project config
-domain_name: "{{ project_config.domain.name }}"
-admin_user: "{{ project_config.domain.admin_user }}"
-admin_password: "{{ project_config.domain.admin_password }}"
+# Domain settings - loaded from inventory
+# domain_name: defined in group_vars/xxxx_xxx.yml
+# domain_admin_user: defined in group_vars/xxxx_xxx.yml (from secrets)
+# domain_admin_password: defined in group_vars/xxxx_xxx.yml (from secrets)
 
-# OU paths - references to project config
+# CRITICAL: Variable name mapping for task compatibility
+# Tasks use 'admin_user' and 'admin_password' for simplicity
+# Inventory uses 'domain_admin_user' and 'domain_admin_password' for clarity
+# This mapping bridges the gap
+admin_user: "{{ domain_admin_user }}"
+admin_password: "{{ domain_admin_password }}"
+
+# OU paths - loaded from inventory group_vars
 ou_paths:
-  linux: "{{ project_config.domain.linux_ou }}"
-  windows: "{{ project_config.domain.windows_ou }}"
+  linux: "{{ linux_ou | default('') }}"
+  windows: "{{ windows_ou | default('') }}"
 
-# Package lists - references to project config
-linux_packages: "{{ project_config.domain_join.linux.packages }}"
+# Linux packages for domain join
+# NOTE: This is defined in inventory/group_vars/xxxx_xxx_linux.yml
+# The inventory value takes precedence - this is just a fallback for other environments
+linux_packages: []
 
-# Computer object description in AD
-computer_description: "{{ project_config.target_vm.description }}"
+# Computer description in AD
+# NOTE: This should be defined per-host in inventory/host_vars/<hostname>.yml
+# Variable name: config_vm_description

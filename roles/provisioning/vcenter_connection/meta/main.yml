@@ -3,9 +3,9 @@
 # Role information and dependencies
 
 galaxy_info:
-  author: "Your Name"
+  author: "Vincent Zamora"
   description: "vCenter connection and validation role for domain join automation"
-  company: "Your Company"
+  company: "Georgia Power"
   license: "MIT"
   min_ansible_version: "2.9"
   platforms:

@@ -33,9 +33,9 @@
     username: "{{ vcenter_user }}"
     password: "{{ vcenter_user_password }}"
     validate_certs: "{{ vcenter_connection_validate_certs }}"
-    datacenter_name: "{{ project_config.vcenter.datacenter }}"
+    datacenter_name: "{{ vcenter_datacenter }}"
   register: datacenter_access
-  when: vcenter_validation_check_datacenter_access
+  when: vcenter_validation_check_datacenter_access and vcenter_datacenter != ''
   tags:
     - vcenter
     - permissions
@@ -46,9 +46,9 @@
     that:
       - datacenter_access.datacenters is defined
       - datacenter_access.datacenters | length > 0
-    fail_msg: "Cannot access datacenter {{ project_config.vcenter.datacenter }}"
+    fail_msg: "Cannot access datacenter {{ vcenter_datacenter }}"
     success_msg: "Datacenter access verified successfully"
-  when: vcenter_validation_check_datacenter_access
+  when: vcenter_validation_check_datacenter_access and vcenter_datacenter != ''
   tags:
     - vcenter
     - permissions
@@ -60,9 +60,9 @@
     username: "{{ vcenter_user }}"
     password: "{{ vcenter_user_password }}"
     validate_certs: "{{ vcenter_connection_validate_certs }}"
-    cluster_name: "{{ project_config.vcenter.cluster }}"
+    cluster_name: "{{ vcenter_cluster }}"
   register: cluster_access
-  when: vcenter_validation_check_cluster_access
+  when: vcenter_validation_check_cluster_access and vcenter_cluster != ''
   tags:
     - vcenter
     - permissions
@@ -73,9 +73,9 @@
     that:
       - cluster_access.clusters is defined
       - cluster_access.clusters | length > 0
-    fail_msg: "Cannot access cluster {{ project_config.vcenter.cluster }}"
+    fail_msg: "Cannot access cluster {{ vcenter_cluster }}"
     success_msg: "Cluster access verified successfully"
-  when: vcenter_validation_check_cluster_access
+  when: vcenter_validation_check_cluster_access and vcenter_cluster != ''
   tags:
     - vcenter
     - permissions
@@ -87,8 +87,9 @@
     username: "{{ vcenter_user }}"
     password: "{{ vcenter_user_password }}"
     validate_certs: "{{ vcenter_connection_validate_certs }}"
-    datastore_name: "{{ project_config.vcenter.datastore }}"
+    datastore_name: "{{ vcenter_datastore }}"
   register: datastore_access
+  when: vcenter_datastore != ''
   tags:
     - vcenter
     - permissions
@@ -99,8 +100,9 @@
     that:
       - datastore_access.datastores is defined
       - datastore_access.datastores | length > 0
-    fail_msg: "Cannot access datastore {{ project_config.vcenter.datastore }}"
+    fail_msg: "Cannot access datastore {{ vcenter_datastore }}"
     success_msg: "Datastore access verified successfully"
+  when: vcenter_datastore != ''
   tags:
     - vcenter
     - permissions

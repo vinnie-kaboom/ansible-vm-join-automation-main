@@ -1,0 +1,21 @@
+# ===================================================================================
+# xxxx.xxx WINDOWS - Windows-Specific Configuration
+# ===================================================================================
+#
+# PURPOSE:
+#   Windows-specific settings for xxxx.xxx domain
+#   All hosts in xxxx_xxx_windows group inherit these variables
+# ===================================================================================
+
+# Define the final variable the playbook will use
+target_ou: "{{ windows_ou }}"
+
+# Windows-specific connection settings
+ansible_connection: winrm
+ansible_winrm_transport: basic
+ansible_winrm_server_cert_validation: ignore
+ansible_winrm_port: 5985
+ansible_user: "Administrator"
+
+# Workflow Mode (for automation)
+workflow_mode: true

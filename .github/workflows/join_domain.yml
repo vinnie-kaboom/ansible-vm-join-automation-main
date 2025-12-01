@@ -1,4 +1,4 @@
-name: Join Domain Workflow
+name: Domain Join Workflow
 
 on:
   pull_request:
@@ -7,142 +7,20 @@ on:
     branches: [main]
 
 jobs:
-  domain-join-configuration:
-    name: Configuration Validation
-    runs-on: self-hosted
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Read domain join configuration
-        id: read-config
-        run: |
-          if [ -f "configs/project_config.yml" ]; then
-            # Extract environment
-            environment=$(grep -A 1 "project:" configs/project_config.yml | grep "environment:" | cut -d'"' -f2)
-          
-            # Extract PR creator information
-            pr_creator_name="${{ github.event.pull_request.user.name }}"
-            pr_creator_login="${{ github.event.pull_request.user.login }}"
-          
-            # Use display name if available, otherwise use username
-            if [ -n "$pr_creator_name" ] && [ "$pr_creator_name" != "null" ]; then
-              pr_creator="$pr_creator_name"
-            else
-              pr_creator="$pr_creator_login"
-            fi
-          
-            # Extract domain section (from domain: to next top-level key)
-            domain_section=$(sed -n '/^domain:/,/^[a-zA-Z_][a-zA-Z0-9_]*:/p' configs/project_config.yml | grep -v "^[a-zA-Z_][a-zA-Z0-9_]*:" | sed 's/^/  /')
-          
-            # Extract target_vm section (from target_vm: to next top-level key)
-            target_vm_section=$(sed -n '/^target_vm:/,/^[a-zA-Z_][a-zA-Z0-9_]*:/p' configs/project_config.yml | grep -v "^[a-zA-Z_][a-zA-Z0-9_]*:" | sed 's/^/  /')
-          
-            # Extract network section (from network: to next top-level key)
-            network_section=$(sed -n '/^network:/,/^[a-zA-Z_][a-zA-Z0-9_]*:/p' configs/project_config.yml | grep -v "^[a-zA-Z_][a-zA-Z0-9_]*:" | sed 's/^/  /')
-          
-            # Write to outputs
-            echo "environment=$environment" >> $GITHUB_OUTPUT
-            echo "pr_creator=$pr_creator" >> $GITHUB_OUTPUT
-            echo "domain_section<<EOF" >> $GITHUB_OUTPUT
-            echo "$domain_section" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "target_vm_section<<EOF" >> $GITHUB_OUTPUT
-            echo "$target_vm_section" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "network_section<<EOF" >> $GITHUB_OUTPUT
-            echo "$network_section" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-          else
-            echo "::error::❌ Configuration file not found: configs/project_config.yml"
-            exit 1
-          fi
-
-      - name: Comment on PR
-        id: pr-commenter
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: operations-support/ansible-golden/.github/actions/pr-commenter@main
-        with:
-          comment-content: |
-            ## Domain Join Configuration Preview
-
-            **PR Created By:** ${{ steps.read-config.outputs.pr_creator }}
-            **PR Number:** ${{ github.event.pull_request.number }}
-            **Source Branch:** ${{ github.head_ref }}
-            **Base Branch:** ${{ github.base_ref }}
-            **Created:** ${{ github.event.pull_request.created_at }}
-
-            ---
-
-            ### Domain Configuration
-            ```yaml
-            domain:
-            ${{ steps.read-config.outputs.domain_section }}
-            ```
-
-            ### Target VM Configuration
-            ```yaml
-            target_vm:
-            ${{ steps.read-config.outputs.target_vm_section }}
-            ```
-
-            ### Network Configuration
-            ```yaml
-            network:
-            ${{ steps.read-config.outputs.network_section }}
-            ```
-
-            ---
-
-          debug: 'true'
-
-      - name: Validate Configuration
-        if: ${{ github.event_name == 'push' }}
-        run: |
-          if [ -f "configs/project_config.yml" ]; then
-            echo "Configuration file found and validated"
-            echo "Starting domain join automation..."
-          else
-            echo "Error: Configuration file not found: configs/project_config.yml"
-            exit 1
-          fi
-
-  test-vcenter:
-    name: 🧪 Test vCenter Environment
-    needs: [domain-join-configuration]
-    if: ${{ github.event_name == 'pull_request' }}
-    uses: operations-support/ansible-golden/.github/workflows/join_operations.yml@main
-    with:
-      config_file: 'configs/project_config.yml'
-      config_section: 'vcenter_test'
-    secrets: inherit
-
-  domain-prechecks:
+  preflight:
     name: 🔍 Domain Join Prechecks
-    needs: [test-vcenter]
     if: ${{ github.event_name == 'pull_request' }}
     uses: operations-support/ansible-golden/.github/workflows/join_operations.yml@main
-    with:
-      config_file: 'configs/project_config.yml'
-      config_section: 'preflight_checks'
     secrets: inherit
+    with:
+      playbook: 'playbooks/site.yml'
+      tags: 'validation'
 
   domain-join:
     name: 🚀 Domain Join Automation
-    needs: [domain-join-configuration]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     uses: operations-support/ansible-golden/.github/workflows/join_operations.yml@main
-    with:
-      config_file: 'configs/project_config.yml'
-      config_section: 'domain_join'
     secrets: inherit
-
-  domain-validation:
-    name: 📊 Domain Join Validation
-    needs: [domain-join]
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.domain-join.result == 'success' }}
-    uses: operations-support/ansible-golden/.github/workflows/join_operations.yml@main
     with:
-      config_file: 'configs/project_config.yml'
-      config_section: 'domain_validation'
-    secrets: inherit
+      playbook: 'playbooks/site.yml'
+      tags: 'domain_join'

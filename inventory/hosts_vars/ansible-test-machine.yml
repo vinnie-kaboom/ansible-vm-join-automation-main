@@ -1,0 +1,25 @@
+# ===================================================================================
+# ANSIBLE-TEST-MACHINE-01 - Host-Specific Variables
+# ===================================================================================
+#
+# PURPOSE:
+#   Host-specific configuration for ansible-test-machine-01
+#   Overrides group variables for this specific host
+# ===================================================================================
+
+# --- Host-Specific Details ---
+vm_name: "{{ inventory_hostname }}"
+vm_ip: "{{ ansible_host }}"
+target_vm_os_type: "linux"
+
+# Computer description in Active Directory
+config_vm_description: "Mijo."
+
+# --- Example of an Override ---
+# Overrides the 'target_ou' set in xxxx_xxx_linux.yml
+# Uncomment this if you need a different OU for this specific host
+# target_ou: "OU=VA,OU=TESTING,DC=CCE3,DC=GPC"
+
+# --- AVOID REDUNDANCY ---
+# DO NOT define ansible_host, ansible_user, or ansible_connection here
+# unless it is an exception to the group default!

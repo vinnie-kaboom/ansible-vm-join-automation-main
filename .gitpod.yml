@@ -1,5 +1,0 @@
-# .gitpod.yml
-vscode:
-  extensions:
-    - codeium.codeium
-    # Or alternative: tabnine.tabnine-vscode

@@ -1,0 +1,32 @@
+# ===================================================================================
+# GLOBAL SETTINGS - All Hosts
+# ===================================================================================
+#
+# PURPOSE:
+#   Global settings that apply to all hosts across all domains
+#   Primarily for orchestration tools like vCenter
+# ===================================================================================
+
+# --- Credentials and Configuration for Orchestration (e.g., vCenter) ---
+# These will be populated from GitHub Secrets in the workflow
+vcenter_hostname: "{{ secrets.VCENTER_HOSTNAME | default('') }}"
+vcenter_username: "{{ secrets.VCENTER_USERNAME | default('') }}"
+vcenter_password: "{{ secrets.VCENTER_PASSWORD | default('') }}"
+vcenter_port: 443
+vcenter_validate_certs: false
+
+# vCenter connection settings
+vcenter_timeout: 30
+vcenter_retry_attempts: 3
+vcenter_retry_delay: 5
+
+# Optional vCenter infrastructure settings (set if needed)
+vcenter_datacenter: ""
+vcenter_cluster: ""
+vcenter_datastore: ""
+vcenter_folder: ""
+
+# Global Ansible Settings
+ansible_host_key_checking: false
+ansible_timeout: 60
+ansible_become_timeout: 60

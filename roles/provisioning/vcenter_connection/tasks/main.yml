@@ -11,7 +11,7 @@
 
 - name: "Include vCenter connection logging tasks"
   include_tasks: logging.yml
-  when: vcenter_logging_enable_logging
+  when: vcenter_logging_enable_logging | default(false)
   tags:
     - vcenter
     - logging
@@ -19,40 +19,8 @@
 
 - name: "Include vCenter permissions verification tasks"
   include_tasks: verify_permissions.yml
-  when: vcenter_validation_check_permissions
+  when: vcenter_validation_check_permissions | default(false)
   tags:
     - vcenter
     - permissions
     - validation
-
-- name: "Establish vCenter connection"
-  vmware_connect:
-    hostname: "{{ vcenter_host }}"
-    username: "{{ vcenter_user }}"
-    password: "{{ vcenter_user_password }}"
-    validate_certs: "{{ vcenter_connection_validate_certs }}"
-    timeout: "{{ vcenter_connection_timeout }}"
-  register: vcenter_connection_result
-  retries: "{{ vcenter_connection_retry_attempts }}"
-  delay: "{{ vcenter_connection_retry_delay }}"
-  until: vcenter_connection_result is success
-  tags:
-    - vcenter
-    - connection
-    - setup
-
-- name: "Notify vCenter connection success"
-  notify: "log vcenter connection success"
-  when: vcenter_connection_result is success
-  tags:
-    - vcenter
-    - connection
-    - notification
-
-- name: "Notify vCenter connection error"
-  notify: "log vcenter connection error"
-  when: vcenter_connection_result is failed
-  tags:
-    - vcenter
-    - connection
-    - notification
