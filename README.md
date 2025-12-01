@@ -80,22 +80,22 @@ Edit `configs/project_config.yml` - this is your **single source of truth**
 ```yaml
 # 1. Domain Information
 domain:
-  name: "cce3.gpc"                    # Your domain name
+  name: "xxxx.xxx"                    # Your domain name
   admin_user: "{{ secrets.DOMAIN_ADMIN_USER }}"       # Set in GitHub Secrets
   admin_password: "{{ secrets.DOMAIN_ADMIN_PASSWORD }}" # Set in GitHub Secrets
-  linux_ou: "OU=Servers,DC=cce3,DC=gpc"  # Linux OU path
-  windows_ou: "OU=Servers,DC=cce3,DC=gpc" # Windows OU path
+  linux_ou: "OU=Servers,DC=xxxx,DC=xxx"  # Linux OU path
+  windows_ou: "OU=Servers,DC=xxxx,DC=xxx" # Windows OU path
 
 # 2. Target VM Information
 target_vm:
-  name: "gadvaappah01"                         # VM name
+  name: "xxxxxxxx01"                         # VM name
   ip_address: "10.5.147.51"                     # VM IP address
   os_type: "linux"                           # "linux" or "windows"
 
 # 3. Network Settings
 network:
-  dns_server: "gadvadc04.cce3.gpc"                    # Domain DNS server
-  domain_controller: "gadvadc04.cce3.gpc"              # Domain controller
+  dns_server: "xxxxxxx04.xxxx.xxx"                    # Domain DNS server
+  domain_controller: "xxxxxx04.xxxx.xxx"              # Domain controller
 ```
 
 ### 2. **Set GitHub Secrets**
@@ -125,7 +125,7 @@ The inventory is **automatically generated** from your `project_config.yml`. The
 ```ini
 # Generated inventory example
 [linux_vms]
-gadvaappah01-join ansible_host=10.5.147.51 ansible_user=root ansible_ssh_pass=*** ansible_become_pass=*** ansible_python_interpreter=/usr/bin/python3
+xxxxxxxx01-join ansible_host=xx.xx.xxx.xxx ansible_user=root ansible_ssh_pass=*** ansible_become_pass=*** ansible_python_interpreter=/usr/bin/python3
 
 [windows_vms]
 # Windows VMs would appear here based on os_type in config
