@@ -4,7 +4,7 @@
 #
 # PURPOSE:
 #   Linux-specific settings for xxxx.xxx domain
-#   All hosts in cce3_gpc_linux group inherit these variables
+#   All hosts in xxxx_xxx_linux group inherit these variables
 # ===================================================================================
 
 # Define the final variable the playbook will use
