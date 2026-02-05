@@ -1,0 +1,6 @@
+---
+# Generate Validation Report
+
+- name: Generate report placeholder
+  debug:
+    msg: "Validation report for {{ inventory_hostname }}"

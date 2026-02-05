@@ -1,0 +1,26 @@
+---
+# Preflight Connection Tasks
+# Validates connectivity before domain operations
+
+- name: Test SSH connectivity
+  wait_for:
+    host: "{{ ansible_host }}"
+    port: 22
+    timeout: 30
+  when: ansible_connection == 'ssh'
+  delegate_to: localhost
+  tags: [preflight, connection]
+
+- name: Test WinRM connectivity
+  wait_for:
+    host: "{{ ansible_host }}"
+    port: "{{ ansible_winrm_port | default(5985) }}"
+    timeout: 30
+  when: ansible_connection == 'winrm'
+  delegate_to: localhost
+  tags: [preflight, connection]
+
+- name: Display connection status
+  debug:
+    msg: "Connection to {{ inventory_hostname }} ({{ ansible_host }}) verified"
+  tags: [preflight, connection]

@@ -1,0 +1,14 @@
+---
+# Linux VM Provisioning Playbook
+# Provisions Linux VMs via VMware vCenter
+
+- name: Provision Linux VM
+  hosts: "{{ target_hosts | default('hosts_linux') }}"
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: Execute Linux VM provisioning workflow
+      include_role:
+        name: provision/vmware_provisioning
+      tags: [provision, linux, vmware]

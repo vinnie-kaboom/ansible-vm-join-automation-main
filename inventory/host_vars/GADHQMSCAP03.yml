@@ -1,0 +1,16 @@
+---
+#  Host-Specific Configuration
+config_vcenter_cluster: "DSCADA HQ GADHQVMES Hosts"
+config_vcenter_datastore: "GADHQVMES-Hyb-vSAN"
+config_vm_folder: "Satellite and Capsule Servers"
+config_vm_template: "cap-sat-template-hq"
+config_vm_environment: "production"
+
+# Computer description in Active Directory
+config_vm_description: "configuration vm description"
+
+# Default VM sizing
+# config_vm_memory_mb: 16384
+# config_vm_cpu_count: 4
+# config_vm_disk_size_gb: 60
+# config_vm_disk_type: "thin

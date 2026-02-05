@@ -1,0 +1,14 @@
+---
+# Windows Domain Leave Playbook
+# Removes Windows VMs from Active Directory domain
+
+- name: Leave Windows VM from Domain
+  hosts: "{{ target_hosts | default('hosts_windows') }}"
+  gather_facts: false
+
+  tasks:
+    - name: Execute Windows domain leave workflow
+      include_role:
+        name: domain/join_domain
+        tasks_from: domain_leave_windows
+      tags: [domain_leave, windows]

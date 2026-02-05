@@ -1,0 +1,9 @@
+---
+# Validate Network Configuration
+
+- name: Validate network settings
+  assert:
+    that:
+      - config_vm_network is defined or vm_network is defined
+    fail_msg: "Network configuration is missing"
+    success_msg: "Network configuration validated"

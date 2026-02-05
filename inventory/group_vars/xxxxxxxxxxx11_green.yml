@@ -1,0 +1,25 @@
+# ===================================================================================
+# NETWORK_XX ORGENGR - Network/Domain-Specific Configuration
+# ===================================================================================
+#
+# PURPOSE:
+#   Network and domain-specific settings for Network XX OrgEngr environment
+#   All hosts in network_xx_orgengr group inherit these variables
+# ===================================================================================
+
+# --- Domain-Specific Configuration ---
+domain_name: "example.com"
+domain_realm: "EXAMPLE.COM"
+
+# Domain Admin Credentials (from GitHub Secrets)
+domain_admin_user: "{{ secrets.DOMAIN_ADMIN_USER | default('') }}"
+domain_admin_password: "{{ secrets.DOMAIN_ADMIN_PASSWORD | default('') }}"
+
+# Domain Controllers/DNS specific to this domain
+dns_server: "10.x.x.x"
+domain_controller: "xxx01.example.com"
+
+# Default OUs for machines in this domain (can be overridden by OS group)
+linux_ou: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+windows_ou: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+m

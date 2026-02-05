@@ -1,0 +1,7 @@
+---
+# Create VM Task
+# Placeholder for VM creation logic
+
+- name: Create VM placeholder
+  debug:
+    msg: "VM creation tasks would run here for {{ vm_name | default(inventory_hostname) }}"

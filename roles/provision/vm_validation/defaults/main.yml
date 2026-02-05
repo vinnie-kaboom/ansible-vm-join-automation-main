@@ -1,0 +1,5 @@
+---
+# VM Validation Role Defaults
+
+validation_timeout: 300
+validation_retries: 3

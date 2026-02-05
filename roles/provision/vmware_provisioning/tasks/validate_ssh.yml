@@ -1,0 +1,9 @@
+---
+# Validate SSH Connectivity
+
+- name: Wait for SSH to become available
+  wait_for:
+    host: "{{ ansible_host }}"
+    port: 22
+    timeout: 300
+  when: target_vm_os_type | default('linux') == 'linux'

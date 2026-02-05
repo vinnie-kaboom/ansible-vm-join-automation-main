@@ -1,0 +1,6 @@
+---
+# Validate VM Resources
+
+- name: Validate resources placeholder
+  debug:
+    msg: "Resource validation for {{ inventory_hostname }}"

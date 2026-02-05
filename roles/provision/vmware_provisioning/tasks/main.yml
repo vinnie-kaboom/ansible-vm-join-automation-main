@@ -1,0 +1,15 @@
+---
+# VMware Provisioning Role - Main Tasks
+
+- name: Validate VM configuration
+  include_tasks: validate.yml
+  tags: [provision, validate]
+
+- name: Create VM
+  include_tasks: create_vm.yml
+  tags: [provision, create]
+
+- name: Wait for customization
+  include_tasks: wait_for_customization.yml
+  when: vm_wait_for_customization | default(true)
+  tags: [provision, customization]

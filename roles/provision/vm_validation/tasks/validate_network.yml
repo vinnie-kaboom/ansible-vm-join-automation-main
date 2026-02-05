@@ -1,0 +1,6 @@
+---
+# Validate Network Connectivity
+
+- name: Validate network placeholder
+  debug:
+    msg: "Network validation for {{ inventory_hostname }}"

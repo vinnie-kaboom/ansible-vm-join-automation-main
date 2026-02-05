@@ -1,0 +1,10 @@
+---
+# VMware Provisioning Role Defaults
+
+# VM defaults
+vm_state: present
+vm_hardware_version: 14
+
+# Customization defaults
+vm_wait_for_customization: true
+vm_customization_timeout: 600

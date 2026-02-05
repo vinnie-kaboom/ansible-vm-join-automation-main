@@ -1,0 +1,10 @@
+---
+# Validate VM Configuration
+
+- name: Validate required variables
+  assert:
+    that:
+      - vm_name is defined or inventory_hostname is defined
+      - vcenter_host is defined
+    fail_msg: "Required VM configuration variables are missing"
+    success_msg: "VM configuration validated"

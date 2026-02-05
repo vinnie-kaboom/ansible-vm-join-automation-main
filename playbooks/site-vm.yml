@@ -1,0 +1,37 @@
+---
+# Main Site Playbook - VM Provisioning and Domain Join
+#
+# PLAYBOOK PURPOSE:
+#   Complete end-to-end VM provisioning and domain join automation
+#
+# WORKFLOW OVERVIEW:
+#   1. Pre-flight connection checks
+#   2. Provision VMs (if needed)
+#   3. Join Linux/Windows VMs to domain
+#   4. Validate domain connectivity
+#
+# USAGE:
+#   # Run everything
+#   ansible-playbook playbooks/site-vm.yml -i inventory/hosts.ini
+#
+#   # Run only preflight
+#   ansible-playbook playbooks/site-vm.yml -i inventory/hosts.ini --tags preflight
+#
+#   # Run only domain join
+#   ansible-playbook playbooks/site-vm.yml -i inventory/hosts.ini --tags domain_join
+
+# Pre-flight connection checks
+- import_playbook: provisioning/domain-operations/validation/preflight_connection.yml
+  tags: [preflight, validation]
+
+# Linux domain join
+- import_playbook: provisioning/domain-operations/join_domain/linux/join_linux_vm.yml
+  tags: [domain_join, linux]
+
+# Windows domain join
+- import_playbook: provisioning/domain-operations/join_domain/windows/join_windows_vm.yml
+  tags: [domain_join, windows]
+
+# Domain validation
+- import_playbook: provisioning/domain-operations/validation/domain_validation.yml
+  tags: [validation, domain]

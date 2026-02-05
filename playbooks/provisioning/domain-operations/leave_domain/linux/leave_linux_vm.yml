@@ -1,0 +1,14 @@
+---
+# Linux Domain Leave Playbook
+# Removes Linux VMs from Active Directory domain
+
+- name: Leave Linux VM from Domain
+  hosts: "{{ target_hosts | default('hosts_linux') }}"
+  become: yes
+
+  tasks:
+    - name: Execute Linux domain leave workflow
+      include_role:
+        name: domain/join_domain
+        tasks_from: domain_leave_linux
+      tags: [domain_leave, linux]

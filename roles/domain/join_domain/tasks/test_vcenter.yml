@@ -1,0 +1,7 @@
+---
+# Test vCenter Connection Tasks
+
+- name: Include vCenter connection role
+  include_role:
+    name: provision/vcenter_connection
+  tags: [vcenter, test]

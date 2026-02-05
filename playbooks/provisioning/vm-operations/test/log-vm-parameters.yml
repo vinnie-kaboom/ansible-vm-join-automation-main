@@ -1,0 +1,18 @@
+---
+# Log VM Parameters Test Playbook
+# Logs VM parameters for debugging
+
+- name: Log VM Parameters
+  hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: Display VM parameters
+      debug:
+        msg: |
+          VM Name: {{ vm_name | default(inventory_hostname) }}
+          VM IP: {{ ansible_host | default('not set') }}
+          OS Type: {{ target_vm_os_type | default('not set') }}
+          Domain: {{ domain_name | default('not set') }}
+      tags: [test, logging]

@@ -6,38 +6,51 @@
 #   Orchestrates domain joining, validation, and testing
 #
 # WORKFLOW OVERVIEW:
-#   1. Join Linux VMs to domain
-#   2. Join Windows VMs to domain (if needed)
-#   3. Validate domain connectivity and configuration
-#   4. Test vCenter integration
+#   1. Pre-flight connection checks
+#   2. Join Linux VMs to domain
+#   3. Join Windows VMs to domain (if needed)
+#   4. Validate domain connectivity and configuration
+#   5. Test vCenter integration
 #
 # USAGE:
 #   ansible-playbook playbooks/site.yml -i inventory/hosts.ini --tags domain_join
-#   ansible-playbook playbooks/site.yml -i inventory/hosts.ini --limit domain_linux --tags domain_join
+#   ansible-playbook playbooks/site.yml -i inventory/hosts.ini --limit hosts_linux --tags domain_join
 #
 # HOST GROUPS:
 #   - runner: GitHub Actions runner / control node
-#   - domain_linux: Linux virtual machines to join to domain
-#   - domain_windows: Windows virtual machines to join to domain
+#   - hosts_linux: Linux virtual machines to join to domain
+#   - hosts_windows: Windows virtual machines to join to domain
+
+# ================================================================================
+# PRE-FLIGHT CHECKS
+# ================================================================================
+
+# Import connection diagnostics
+- import_playbook: provisioning/domain-operations/validation/preflight_connection.yml
+  tags: [preflight, connection, validation]
 
 # ================================================================================
 # DOMAIN JOIN ORCHESTRATION
 # ================================================================================
 
 # Import Linux domain join playbook
-# The playbook will skip gracefully if no hosts match the domain_linux group
-- import_playbook: provisioning/join_domain/linux/join_linux_vm.yml
+# The playbook will skip gracefully if no hosts match the hosts_linux group
+- import_playbook: provisioning/domain-operations/join_domain/linux/join_linux_vm.yml
   tags: [domain_join, linux]
 
 # Import Windows domain join playbook
-# The playbook will skip gracefully if no hosts match the domain_windows group
-- import_playbook: provisioning/join_domain/windows/join_windows_vm.yml
+# The playbook will skip gracefully if no hosts match the hosts_windows group
+- import_playbook: provisioning/domain-operations/join_domain/windows/join_windows_vm.yml
   tags: [domain_join, windows]
 
+# ================================================================================
+# POST-JOIN VALIDATION
+# ================================================================================
+
 # Import domain validation
-- import_playbook: validation/domain_validation.yml
+- import_playbook: provisioning/domain-operations/validation/domain_validation.yml
   tags: [validation, domain]
 
 # Import vCenter testing
-- import_playbook: validation/test_vcenter.yml
+- import_playbook: provisioning/domain-operations/validation/test_vcenter.yml
   tags: [validation, vcenter]

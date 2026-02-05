@@ -1,0 +1,6 @@
+---
+# Wait for VM Customization
+
+- name: Wait for customization placeholder
+  debug:
+    msg: "Waiting for VM customization to complete"

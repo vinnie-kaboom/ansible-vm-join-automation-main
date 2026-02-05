@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  role_name: vm_validation
+  author: DevOps Team
+  description: VM validation role
+  min_ansible_version: "2.14"
+
+dependencies: []

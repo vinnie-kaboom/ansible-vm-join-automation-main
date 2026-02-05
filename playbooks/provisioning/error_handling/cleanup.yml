@@ -1,0 +1,13 @@
+---
+# Error Handling Cleanup Playbook
+# Handles cleanup operations after failed provisioning
+
+- name: Cleanup Failed Provisioning
+  hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: false
+
+  tasks:
+    - name: Cleanup placeholder
+      debug:
+        msg: "Cleanup tasks would run here"
+      tags: [cleanup, error_handling]

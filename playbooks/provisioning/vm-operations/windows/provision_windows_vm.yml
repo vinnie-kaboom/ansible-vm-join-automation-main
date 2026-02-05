@@ -1,0 +1,14 @@
+---
+# Windows VM Provisioning Playbook
+# Provisions Windows VMs via VMware vCenter
+
+- name: Provision Windows VM
+  hosts: "{{ target_hosts | default('hosts_windows') }}"
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: Execute Windows VM provisioning workflow
+      include_role:
+        name: provision/vmware_provisioning
+      tags: [provision, windows, vmware]

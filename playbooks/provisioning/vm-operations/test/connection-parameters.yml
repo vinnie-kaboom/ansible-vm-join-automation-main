@@ -1,0 +1,18 @@
+---
+# Connection Parameters Test Playbook
+# Tests connection parameters for VM provisioning
+
+- name: Test Connection Parameters
+  hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: Display connection parameters
+      debug:
+        msg: |
+          Host: {{ inventory_hostname }}
+          ansible_host: {{ ansible_host | default('not set') }}
+          ansible_user: {{ ansible_user | default('not set') }}
+          ansible_connection: {{ ansible_connection | default('not set') }}
+      tags: [test, connection]

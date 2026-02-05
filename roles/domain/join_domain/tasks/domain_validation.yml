@@ -1,0 +1,8 @@
+---
+# Domain Validation Tasks
+# Validates domain join status
+
+- name: Include domain validation role
+  include_role:
+    name: domain/join_validation
+  tags: [validation, domain]

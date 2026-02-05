@@ -1,0 +1,6 @@
+---
+# Validate VM Configuration
+
+- name: Validate configuration placeholder
+  debug:
+    msg: "Configuration validation for {{ inventory_hostname }}"
