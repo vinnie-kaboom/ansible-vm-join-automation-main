@@ -84,11 +84,11 @@
     #   - Authentication validation (tests credentials)
     #   - Resource verification (checks datacenter, cluster, datastore exist)
     #   - Permission checks (validates user has required privileges)
-    # See roles/provisioning/vcenter_connection/tasks/main.yml for detailed implementation
+    # See roles/provision/vcenter_connection/tasks/main.yml for detailed implementation
     # Will fail playbook if any validation fails
     - name: "Include vCenter connection role"
       include_role:
-        name: provisioning/vcenter_connection
+        name: provision/vcenter_connection
       tags:
         - vcenter
         - connection

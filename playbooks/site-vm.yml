@@ -22,7 +22,7 @@
 
 # Pre-flight connection checks
 - import_playbook: provisioning/domain-operations/validation/preflight_connection.yml
-  tags: [preflight, validation]
+  tags: [preflight, connection, validation]
 
 # Linux domain join
 - import_playbook: provisioning/domain-operations/join_domain/linux/join_linux_vm.yml
