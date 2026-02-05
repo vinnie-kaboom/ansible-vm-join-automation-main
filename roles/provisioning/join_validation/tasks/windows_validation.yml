@@ -66,10 +66,16 @@
     - name: Test domain connectivity and authentication
       block:
         # Tests TCP connection to domain controller on LDAP port 389
-        # Output: TcpTestSucceeded=true if DC is reachable on port 389, false otherwise
+        # Returns TcpTestSucceeded property in stdout which we parse
         - name: Check domain controller connectivity
-          win_shell: "Test-NetConnection -ComputerName {{ domain_name }} -Port 389"
+          win_shell: "(Test-NetConnection -ComputerName {{ domain_name }} -Port 389).TcpTestSucceeded"
           register: dc_connectivity_test
+          failed_when: false
+
+        # Parse the connectivity result from stdout
+        - name: Set domain controller connectivity status
+          set_fact:
+            dc_connectivity_succeeded: "{{ dc_connectivity_test.stdout | default('') | trim | lower == 'true' }}"
 
         # Queries Active Directory for a specific user to test authentication
         # Output: User object details if successful (exit code 0), error if user not found or auth fails
@@ -82,7 +88,7 @@
         - name: Verify domain connectivity and authentication
           assert:
             that:
-              - dc_connectivity_test.TcpTestSucceeded == true
+              - dc_connectivity_succeeded | bool
               - auth_test_result.rc == 0
             fail_msg: "Domain connectivity or authentication failed. Check network connectivity and user permissions."
             success_msg: "Domain connectivity and authentication verified"
@@ -108,11 +114,16 @@
     - name: Check Windows features and domain services
       block:
         # Checks if Remote Server Administration Tools for Active Directory are installed
-        # Output: Feature object with InstallState="Installed" if RSAT-AD-PowerShell is available
+        # Returns InstallState property from stdout
         - name: Check RSAT-AD-PowerShell feature
-          win_shell: "Get-WindowsFeature -Name RSAT-AD-PowerShell"
+          win_shell: "(Get-WindowsFeature -Name RSAT-AD-PowerShell).InstallState"
           register: rsat_check
           failed_when: false
+
+        # Parse the RSAT installation state from stdout
+        - name: Set RSAT installation status
+          set_fact:
+            rsat_is_installed: "{{ rsat_check.stdout | default('') | trim == 'Installed' }}"
 
         # Retrieves Group Policy Objects to verify GPO connectivity
         # Output: GPO XML reports if accessible (exit code 0 or 1 acceptable), error otherwise
@@ -132,7 +143,7 @@
         - name: Verify Windows features and services
           assert:
             that:
-              - rsat_check.InstallState == "Installed"
+              - rsat_is_installed | bool
               - gpo_check.rc in [0, 1]
               - trust_test.rc == 0
             fail_msg: "Windows features or domain services not properly configured"
@@ -195,11 +206,11 @@
         windows_validation_details:
           domain: "{{ domain_name }}"
           membership: "{{ is_joined_to_correct_domain }}"
-          dc_connectivity: "{{ dc_connectivity_test.TcpTestSucceeded }}"
+          dc_connectivity: "{{ dc_connectivity_succeeded }}"
           authentication: "{{ auth_test_result.rc == 0 }}"
           dns_resolution: "{{ dns_check.rc == 0 }}"
           group_policy: "{{ gpo_check.rc in [0, 1] }}"
-          rsat_feature: "{{ rsat_check.InstallState == 'Installed' }}"
+          rsat_feature: "{{ rsat_is_installed }}"
           trust_relationship: "{{ trust_test.rc == 0 }}"
           computer_account: "{{ computer_account_check.rc == 0 }}"
           final_domain_status: "{{ final_domain_status.stdout | trim }}"
@@ -213,11 +224,11 @@
           Windows Domain Validation SUCCESS for {{ inventory_hostname }}
           Domain: {{ domain_name }}
           Membership: {{ 'JOINED' if is_joined_to_correct_domain else 'NOT JOINED' }}
-          DC Connectivity: {{ 'SUCCESS' if dc_connectivity_test.TcpTestSucceeded else 'FAILED' }}
+          DC Connectivity: {{ 'SUCCESS' if dc_connectivity_succeeded else 'FAILED' }}
           Authentication: {{ 'SUCCESS' if auth_test_result.rc == 0 else 'FAILED' }}
           DNS Resolution: {{ 'SUCCESS' if dns_check.rc == 0 else 'FAILED' }}
           Group Policy: {{ 'ACCESSIBLE' if gpo_check.rc in [0, 1] else 'FAILED' }}
-          RSAT Feature: {{ 'AVAILABLE' if rsat_check.InstallState == 'Installed' else 'MISSING' }}
+          RSAT Feature: {{ 'AVAILABLE' if rsat_is_installed else 'MISSING' }}
           Trust Relationship: {{ 'VERIFIED' if trust_test.rc == 0 else 'FAILED' }}
           Computer Account: {{ 'FOUND' if computer_account_check.rc == 0 else 'MISSING' }}
           

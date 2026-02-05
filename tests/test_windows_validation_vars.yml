@@ -1,0 +1,113 @@
+---
+# Test playbook to verify Windows validation variable references
+# Validates that win_shell output is correctly parsed from stdout
+#
+# This test simulates the expected output format from win_shell commands
+# and verifies the variable parsing logic works correctly.
+#
+# Run with: ansible-playbook tests/test_windows_validation_vars.yml -c local
+
+- name: Test Windows Validation Variable Parsing
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    # Simulate win_shell output for Test-NetConnection
+    dc_connectivity_test:
+      stdout: "True"
+      stderr: ""
+      rc: 0
+
+    # Simulate win_shell output for Get-WindowsFeature
+    rsat_check:
+      stdout: "Installed"
+      stderr: ""
+      rc: 0
+
+  tasks:
+    - name: Test - Parse DC connectivity from stdout (True case)
+      set_fact:
+        dc_connectivity_succeeded: "{{ dc_connectivity_test.stdout | default('') | trim | lower == 'true' }}"
+
+    - name: Verify DC connectivity parsing (True)
+      assert:
+        that:
+          - dc_connectivity_succeeded | bool == true
+        fail_msg: "Failed to parse 'True' from stdout"
+        success_msg: "✅ DC connectivity parsing works for 'True'"
+
+    - name: Test - Parse RSAT installation state from stdout
+      set_fact:
+        rsat_is_installed: "{{ rsat_check.stdout | default('') | trim == 'Installed' }}"
+
+    - name: Verify RSAT parsing (Installed)
+      assert:
+        that:
+          - rsat_is_installed | bool == true
+        fail_msg: "Failed to parse 'Installed' from stdout"
+        success_msg: "✅ RSAT installation parsing works for 'Installed'"
+
+    # Test False case for DC connectivity
+    - name: Test - Parse DC connectivity from stdout (False case)
+      vars:
+        dc_connectivity_test_false:
+          stdout: "False"
+          stderr: ""
+          rc: 0
+      set_fact:
+        dc_connectivity_failed: "{{ dc_connectivity_test_false.stdout | default('') | trim | lower == 'true' }}"
+
+    - name: Verify DC connectivity parsing (False)
+      assert:
+        that:
+          - dc_connectivity_failed | bool == false
+        fail_msg: "Failed to parse 'False' from stdout"
+        success_msg: "✅ DC connectivity parsing works for 'False'"
+
+    # Test empty/missing stdout
+    - name: Test - Parse DC connectivity from empty stdout
+      vars:
+        dc_connectivity_test_empty:
+          stderr: "Error"
+          rc: 1
+      set_fact:
+        dc_connectivity_empty: "{{ dc_connectivity_test_empty.stdout | default('') | trim | lower == 'true' }}"
+
+    - name: Verify DC connectivity parsing (empty)
+      assert:
+        that:
+          - dc_connectivity_empty | bool == false
+        fail_msg: "Failed to handle empty stdout"
+        success_msg: "✅ DC connectivity parsing handles empty stdout"
+
+    # Test RSAT not installed
+    - name: Test - Parse RSAT not installed
+      vars:
+        rsat_check_not_installed:
+          stdout: "Available"
+          stderr: ""
+          rc: 0
+      set_fact:
+        rsat_not_installed: "{{ rsat_check_not_installed.stdout | default('') | trim == 'Installed' }}"
+
+    - name: Verify RSAT parsing (Available/Not Installed)
+      assert:
+        that:
+          - rsat_not_installed | bool == false
+        fail_msg: "Failed to parse 'Available' as not installed"
+        success_msg: "✅ RSAT installation parsing works for 'Available'"
+
+    - name: Display test summary
+      debug:
+        msg: |
+          ========================================
+          All Windows Validation Variable Tests Passed!
+          ========================================
+          
+          Tested scenarios:
+          - DC connectivity stdout parsing (True/False/Empty)
+          - RSAT installation state parsing (Installed/Available)
+          
+          The fix correctly parses win_shell stdout instead of
+          accessing non-existent object properties.
