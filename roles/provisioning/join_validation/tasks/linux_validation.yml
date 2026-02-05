@@ -1,29 +1,5 @@
 ---
 # Linux Domain Validation Tasks
-# Streamlined validation with essential functionality and minimal debug output
-#
-# ANSIBLE COLLECTIONS USED:
-#   - ansible.builtin (implicit) - Core Ansible modules, no external dependencies
-#   - NO external collections required for Linux validation
-#
-# All modules use ansible.builtin: shell, command, stat, assert, set_fact
-#
-# VALIDATION FLOW:
-#   1. Check domain membership using multiple methods (realm, adcli, getent)
-#   2. Verify domain-specific assertions
-#   3. Validate SSSD service and configuration files
-#   4. Test DNS resolution for the domain
-#   5. Verify SSSD installation
-#   6. Set validation success status with detailed results
-#
-# REQUIRED VARIABLES:
-#   - config_domain_name: Domain name to validate (e.g., "example.com")
-#   - config_vm_name: VM hostname for computer account verification
-#   - config_domain_ou_linux: Organizational Unit path for Linux computers
-#
-# OPTIONAL VARIABLES:eeeeeeeeee
-#   - domain_admin_user: Domain user to test authentication (if not set, skips auth test)
-#   - join_method: Method used to join domain (for reporting purposes)
 
 - name: Linux Domain Validation Tasks
   block:

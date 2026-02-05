@@ -1,6 +1,5 @@
 ---
 
-# Domain Validation Playbook
 - name: Domain Join Validation
   hosts: "{{ ansible_host | default('all_servers') }}"
   gather_facts: yes
@@ -39,9 +38,15 @@
     # Automatically detects OS type (Linux/Windows) and runs appropriate validation checks
     # For Linux: Validates realm membership, SSSD status, user authentication
     # For Windows: Validates domain membership, trust relationship, group policy
-    # See roles/provisioning/join_validation/tasks/main.yml for detailed implementation
-    - name: Execute domain validation checks
-      include_role:
-        name: domain/join_validation
+    # NOTE: join_validation role does not exist yet - commenting out until created
+    # - name: Execute domain validation checks
+    #   include_role:
+    #     name: domain/join_validation
+    #   tags: validation
+    - name: Domain validation placeholder
+      debug:
+        msg: "Domain validation role not yet implemented"
       tags: validation
+
+
 

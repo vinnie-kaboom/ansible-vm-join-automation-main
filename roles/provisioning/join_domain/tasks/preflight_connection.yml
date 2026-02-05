@@ -2,13 +2,9 @@
 # Pre-flight Connection Check - ALWAYS Shows Output
 # Uses changed_when: true to force task visibility in output
 
-- name: "🔍 pre-flight connection check"
+- name: "========== PRE-FLIGHT CONNECTION CHECK =========="
   hosts: "{{ ansible_host | default('all_servers') }}"
   gather_facts: no
-
-  vars:
-    ansible_user: "{{ config_vm_ansible_user }}"
-    ansible_password: "{{ config_vm_ansible_password }}"
 
   tasks:
     - name: "🔍 Testing SSH connection to {{ inventory_hostname }}"

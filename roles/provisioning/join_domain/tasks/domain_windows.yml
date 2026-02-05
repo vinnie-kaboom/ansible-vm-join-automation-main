@@ -1,17 +1,8 @@
 ---
 # Windows Domain Join Tasks
-#
-# ANSIBLE COLLECTIONS USED:
-#   - ansible.builtin (implicit) - Core modules: set_fact, debug, assert, include_role
-#   - community.windows (explicit) - EXTERNAL DEPENDENCY REQUIRED
-#       Modules: win_shell, win_domain_membership, win_reboot, win_feature
-#       Version: >= 4.0.0
-#       Install: ansible-galaxy collection install community.windows
-#
-# IMPORTANT: community.windows collection must be installed before running this playbook
-
 # Query current domain membership status using WMI
 # Output: current_domain_status (stdout contains domain name or WORKGROUP)
+
 - name: Check current domain status
   tags: [domain_join]
   win_shell: "(Get-WmiObject -Class Win32_ComputerSystem).Domain"

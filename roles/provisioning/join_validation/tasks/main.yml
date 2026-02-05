@@ -1,37 +1,14 @@
 ---
-# Domain Join Validation Role - Main Tasks
-#
-# PURPOSE:
+
 #   Orchestrates domain join validation by detecting the operating system
 #   and routing to the appropriate OS-specific validation tasks.
-#
-# ANSIBLE COLLECTIONS USED:
-#   - ansible.builtin (implicit) - Core modules only
-#   - community.windows (in windows_validation.yml) - EXTERNAL: Required for Windows
-#
-# External Collection Dependencies:
-#   Linux:   NONE (uses only ansible.builtin)
-#   Windows: community.windows >= 4.0.0 (must be installed)
-#
-# VALIDATION FLOW:
-#   1. Detect operating system (Linux or Windows)
-#   2. Include appropriate OS-specific validation tasks
-#   3. Set validation completion status with timestamp
-#   4. Fail playbook if validation was not successful
-#
-# OS Detection Logic:
-#   - Linux:   ansible_system == 'Linux'
-#   - Windows: ansible_system == 'Win32NT' or ansible_os_family == 'Windows'
 
-# STEP 1: Include Linux validation tasks (if Linux OS detected)
-# Routes to linux_validation.yml for Linux-specific domain validation
-# Output: Runs 7 validation steps and sets linux_validation_success fact
 - name: Include Linux validation tasks
   include_tasks: linux_validation.yml
   when: ansible_system == 'Linux'
   tags: validation
 
-# STEP 2: Include Windows validation tasks (if Windows OS detected)
+# Include Windows validation tasks (if Windows OS detected)
 # Routes to windows_validation.yml for Windows-specific domain validation
 # Output: Runs 9 validation steps and sets windows_validation_success fact
 - name: Include Windows validation tasks
@@ -39,7 +16,7 @@
   when: ansible_system == 'Win32NT' or ansible_os_family == 'Windows'
   tags: validation
 
-# STEP 3: Set validation completion status
+# Set validation completion status
 # Aggregates OS-specific validation results into a unified completion status
 # Output: Sets domain_validation_completed (true/false) and validation_timestamp (ISO8601 format)
 - name: Set validation completion status
@@ -48,7 +25,7 @@
     validation_timestamp: "{{ ansible_date_time.iso8601 }}"
   tags: validation
 
-# STEP 4: Fail if validation was not successful
+# Fail if validation was not successful
 # Critical checkpoint - stops playbook execution if domain validation failed
 # Output: Failure message with hostname if validation failed, or continues if successful
 - name: Fail if validation was not successful

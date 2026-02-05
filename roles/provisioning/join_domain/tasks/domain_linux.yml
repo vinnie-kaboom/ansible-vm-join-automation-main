@@ -779,6 +779,6 @@
 # Call join_validation role for comprehensive domain validation
 - name: Include join_validation role for comprehensive domain validation
   include_role:
-    name: provisioning/join_validation
+    name: domain/join_validation
   when: not was_already_joined and join_successful
   tags: [domain_join, validation]

@@ -1,0 +1,26 @@
+---
+
+# Joins Linux VMs to Active Directory domain using SSSD and realmd
+
+- name: Join Linux VM to Domain
+  hosts: "{{ target_hosts | default('all') }}"   # cce3_gpc_linux
+  any_errors_fatal: true
+  gather_facts: true
+  connection: local
+  serial: "{{ vm_parallel_count | default(5) }}"
+
+  # Set default connection parameters for all VMware modules in this play
+  # Eliminates need to repeat these 3 parameters in every VMware task
+  module_defaults:
+    group/vmware:
+      username: "{{ config_vm_root_user }}"
+      password: "{{ config_vm_root_password }}"
+
+  tasks:
+    - name: Execute Linux domain join workflow
+      include_role:
+        name: domain/join_domain
+        tasks_from: domain_linux
+      tags: [domain_join, linux]
+      # Implementation: roles/vm-operations/join_domain/tasks/domain_linux.yml
+      # Variables come from inventory group_vars/network_xx_or

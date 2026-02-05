@@ -1,21 +1,30 @@
+---
 # ===================================================================================
-# ZONE HQ - Zone-Level Configuration
+# Zone: xxxxx‑HQ — vCenter and environment configuration
+# vCenter connection defaults for xxxxx-HQ
 # ===================================================================================
-#
-# PURPOSE:
-#   Zone-wide settings for HQ environment
-#   All hosts in zone_hq inherit these variables
-# ===================================================================================
+
+vcenter_host: "{{ secrets.VCENTER_HOSTNAME_HQ | default('') }}"
+config_vcenter_datacenter: "xxxxx-HQ-Datacenter"
+config_vm_domain: "cce3.gcp"
+
+config_vcenter_resource_pool: ""
+config_vcenter_connection_timeout: 30
+config_vcenter_connection_retry_attempts: 3
+config_vcenter_connection_delay: 5
+config_vcenter_connection_validate_certs: false
+config_vcenter_validation_check_permissions: true
 
 # Zone identification
-zone_name: "zone-hq"
+zone_name: "xxxxx-hq"
 zone_location: "Headquarters"
 
-# Zone-wide network settings (can be overridden by network groups)
+# Zone-wide network settings
 zone_ntp_servers:
-  - "10.x.x.x"
-  - "10.x.x.x"
+  - "xx.x.xxx.xx"
+  - "xx.x.xxx.xx"
 
 # Zone-wide monitoring/logging (optional)
-# syslog_server: "10.x.x.x"
-# monitoring_server: "10.x.x.x"
+# syslog_server: "xx.x.xxx.xx"
+# monitoring_server: "xx.x.xxx.xx"
+
